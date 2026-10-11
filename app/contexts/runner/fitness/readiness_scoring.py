@@ -11,10 +11,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.core.formatting import parse_race_time_to_seconds
+from app.core.time_utils import to_date as _to_date
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, WeeklyPlan
-from app.utils import parse_race_time_to_seconds
-from app.utils import to_date as _to_date
 
 # ------------------------------------------------------------------
 # Weekly volume bucketing

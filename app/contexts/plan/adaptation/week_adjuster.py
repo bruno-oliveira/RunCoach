@@ -10,7 +10,7 @@ from app.core.training.workouts import key_workout_library as _kwlib
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.workout_registry import build_workout
 from app.models import TrainingPlan, WeeklyPlan
-from app.utils import persist_json
+from app.models.json_columns import persist_json
 
 from . import change_reasons as _reasons
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups

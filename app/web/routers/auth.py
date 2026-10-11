@@ -27,11 +27,11 @@ from app.dependencies import (
 )
 from app.infrastructure.config import settings
 from app.models import User
-from app.rate_limit import account_deletion_limiter, auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
 from app.schemas.auth_schemas import UserSettingsUpdate
-from app.template_helpers import create_templates
 from app.web.middleware import _cookie_secure
+from app.web.rate_limit import account_deletion_limiter, auth_limiter
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,6 @@ COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
 # Set by Google Identity Services on our origin before it redirects away, and
 # echoed in the form it posts back: the double-submit pair for that POST.
 GOOGLE_CSRF_COOKIE = "g_csrf_token"
-
-templates = create_templates()
 
 
 def _user_response(user: User) -> UserResponse:

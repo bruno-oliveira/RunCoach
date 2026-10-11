@@ -19,9 +19,9 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.core.coaching.week_review import WeekReview, build_week_review
+from app.core.time_utils import to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
-from app.utils import to_date
 
 
 @dataclass(frozen=True)

@@ -19,16 +19,15 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.constants import DISTANCE_NAMES
 from app.contexts.plan.adaptation.reconcile import pace_zones_for
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.goal_pace_model import (
     goal_pace_context,
     progressive_pace_zones,
 )
 from app.core.training.physiology.zone_calculator import calculate_zones
-from app.utils import to_date
+from app.core.training.training_config import DISTANCE_NAMES
 
 if TYPE_CHECKING:
     from app.models.training_plan import TrainingPlan
@@ -138,7 +137,7 @@ class PerformancePlanHandler(PlanTypeHandler):
         from app.contexts.plan.generators.performance_plan_generator import (
             PerformancePlanGenerator,
         )
-        from app.utils import format_pace
+        from app.core.formatting import format_pace
 
         try:
             perf_service = PerformanceService(db)

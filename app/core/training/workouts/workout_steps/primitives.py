@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Dict, Iterator, List, Optional
 
-from app.utils import format_km
+from app.core.formatting import format_km
 
 STEP_KINDS = (
     "warmup",

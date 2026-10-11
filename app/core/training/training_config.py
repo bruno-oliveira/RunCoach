@@ -116,6 +116,13 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
     ),
 }
 
+# Both derived from the registry above, so adding a race distance is one entry
+# there and the supported-distance list / display-name map fall out of it.
+SUPPORTED_DISTANCES: list[float] = list(DISTANCE_CONSTRAINTS.keys())
+DISTANCE_NAMES: dict[float, str] = {
+    km: cfg.name for km, cfg in DISTANCE_CONSTRAINTS.items()
+}
+
 
 # --- Per-run viability floors ----------------------------------------------
 

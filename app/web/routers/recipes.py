@@ -17,12 +17,10 @@ from app.dependencies import (
     get_optional_user,
 )
 from app.models import User
-from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["recipes"])
-templates = create_templates()
 meal_db = get_meal_database()
 
 

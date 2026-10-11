@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.coaching.verdict import verdict_from_thresholds
+from app.core.formatting import parse_race_time_to_seconds
+from app.core.time_utils import to_date as _to_date
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog, TrainingPlan
-from app.utils import parse_race_time_to_seconds
-from app.utils import to_date as _to_date
 
 # Ladder thresholds (best→worst) for the on_track/close/behind/far_behind verdict.
 # Deficit/gap ladders are "lower is better"; completion is "higher is better".

@@ -10,13 +10,12 @@ from app.contexts.nutrition.favorites_service import FavoritesService
 from app.contexts.nutrition.meal_database import get_meal_database, meal_type_label
 from app.dependencies import get_db, get_favorites_service, get_optional_user
 from app.infrastructure.config import settings
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["recipes-pages"])
 
-templates = create_templates()
 meal_db = get_meal_database()
 
 

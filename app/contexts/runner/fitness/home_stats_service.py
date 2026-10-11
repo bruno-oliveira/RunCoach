@@ -35,9 +35,9 @@ from app.core.coaching.intensity_split import (
     TOO_HARD,
     intensity_split,
 )
+from app.core.formatting import format_pace
 from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.models import RunLog, User
-from app.utils import format_pace
 
 # One opinionated window. ~6 calendar months; bucketing only emits months that
 # actually have runs, so a newer runner simply sees a shorter line.

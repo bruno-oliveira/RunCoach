@@ -11,12 +11,11 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.config import settings
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
-templates = create_templates()
 
 
 @router.get("/my-plans")

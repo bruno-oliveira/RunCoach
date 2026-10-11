@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.infrastructure.config import settings
-from app.rate_limit import InMemoryRateLimitStore, RateLimiter, use_shared_store
+from app.web.rate_limit import InMemoryRateLimitStore, RateLimiter, use_shared_store
 
 
 def _buckets(limiter: RateLimiter) -> dict:
@@ -126,7 +126,7 @@ class TestBucketPruning:
     """
 
     def test_an_abandoned_bucket_is_swept_away(self, limiter):
-        from app.rate_limit import _SWEEP_EVERY
+        from app.web.rate_limit import _SWEEP_EVERY
 
         settings.trusted_proxy_hops = 1
         limiter.check(_request(header="203.0.113.9"))
@@ -141,7 +141,7 @@ class TestBucketPruning:
         assert "203.0.113.9" not in _buckets(limiter)
 
     def test_a_live_bucket_survives_the_sweep(self, limiter):
-        from app.rate_limit import _SWEEP_EVERY
+        from app.web.rate_limit import _SWEEP_EVERY
 
         settings.trusted_proxy_hops = 1
         limiter.check(_request(header="203.0.113.9"))
@@ -152,7 +152,7 @@ class TestBucketPruning:
 
     def test_the_sweep_bounds_the_number_of_tracked_ips(self, limiter):
         """Distinct one-shot IPs must not be retained across sweeps."""
-        from app.rate_limit import _SWEEP_EVERY
+        from app.web.rate_limit import _SWEEP_EVERY
 
         settings.trusted_proxy_hops = 1
         limit = _SWEEP_EVERY * 3
@@ -168,7 +168,7 @@ class TestBucketPruning:
         """A full bucket must still 429 after a sweep has run."""
         from fastapi import HTTPException
 
-        from app.rate_limit import _SWEEP_EVERY
+        from app.web.rate_limit import _SWEEP_EVERY
 
         settings.trusted_proxy_hops = 1
         for i in range(_SWEEP_EVERY):
@@ -205,7 +205,7 @@ class TestRateLimitStoreSeam:
 
     def test_a_shared_store_can_be_installed_on_every_module_limiter(self):
         """``use_shared_store`` is the one-line scale-out switch."""
-        from app import rate_limit
+        from app.web import rate_limit
 
         shared = InMemoryRateLimitStore()
         try:

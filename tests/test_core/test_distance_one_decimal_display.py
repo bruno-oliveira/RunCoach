@@ -27,7 +27,7 @@ import pytest
 from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
-from app.utils import format_km, truncate_km
+from app.core.formatting import format_km, truncate_km
 
 # Matches a decimal number with two or more fractional digits (e.g. 0.775,
 # 1.875). Pace tokens like "5:07" use a colon, not a dot, so they don't match.

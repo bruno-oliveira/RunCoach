@@ -9,8 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.contexts.runner.fitness.personal_records_service import PersonalRecordsService
+from app.core.formatting import format_pace_bare
 from app.models import Base, RunLog, User
-from app.utils import format_pace_bare
 
 
 def _uid():

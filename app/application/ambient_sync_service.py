@@ -35,6 +35,9 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.application.post_sync_service import (
+    auto_map_and_adjust,
+)
 from app.application.push_notification_service import (
     after_sync_off_loop,
     get_push_notifier,
@@ -42,17 +45,13 @@ from app.application.push_notification_service import (
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.application.wellness_sync_service import refresh_wellness
 from app.contexts.plan.adaptation import AdaptationService
-from app.core.time_utils import use_timezone
+from app.core.time_utils import TimestampAdapter, use_timezone
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
 )
-from app.infrastructure.integrations.post_sync_service import (
-    auto_map_and_adjust,
-)
 from app.models import TrainingPlan, User
-from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 

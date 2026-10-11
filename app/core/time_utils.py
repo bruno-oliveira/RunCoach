@@ -19,8 +19,8 @@ back to UTC, matching the previous server-clock behaviour.
 
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from datetime import date, datetime, timezone
-from typing import Iterator, Optional
+from datetime import date, datetime, timedelta, timezone
+from typing import Iterator, Optional, Union
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 _MAX_TZ_NAME_LEN = 64
@@ -111,3 +111,60 @@ def use_timezone(name: Optional[str]) -> Iterator[None]:
         yield
     finally:
         reset_request_timezone(token)
+
+
+def to_date(value: Union[datetime, date, None]) -> Optional[date]:
+    """Coerce a datetime or date to a plain date object.
+
+    Args:
+        value: A datetime, date, or None.
+
+    Returns:
+        A date object, or None if value is None.
+    """
+    if value is None:
+        return None
+    # `datetime` is a subclass of `date`, and the parameter is annotated as one
+    # of the two, so this is the whole truth — the previous `hasattr(value,
+    # "date")` duck-check also let a plain `date` through to `value.date()`,
+    # which `date` does not have.
+    if isinstance(value, datetime):
+        return value.date()
+    return value
+
+
+class TimestampAdapter:
+    """Centralizes all timestamp conversions between the sync API, the DB, and the UI.
+
+    Three timestamp contexts must stay consistent:
+    - Sync API    — uses UTC epoch seconds for the ``after`` filter parameter.
+    - DB storage  — stores ``start_date_local`` (runner's local time, no TZ) as a
+                    naive datetime.
+    - UI display  — filters by local calendar days, using local midnight as the
+                    cutoff so that the boundary day is always fully included.
+
+    The key rule: never anchor the ``after`` timestamp to ``now - N×86400s``.
+    That anchors to the current time-of-day, silently dropping runs from the early
+    hours of calendar day N whenever the sync runs later in the day.  UTC midnight
+    is the safe anchor — it always includes the full calendar day.
+    """
+
+    @staticmethod
+    def days_ago_utc_epoch(days: int) -> int:
+        """Return the UTC epoch for 00:00:00 UTC exactly N calendar days ago.
+
+        Use this for every sync ``after`` parameter.  Because ``after`` is
+        compared against each activity's ``start_date`` (UTC), anchoring to UTC
+        midnight guarantees the complete calendar day is always fetched,
+        regardless of what time the sync runs.
+
+        Args:
+            days: Number of calendar days to look back.
+
+        Returns:
+            UTC epoch (seconds) for 00:00:00 UTC on (today − N days).
+        """
+        midnight_today = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return int((midnight_today - timedelta(days=days)).timestamp())

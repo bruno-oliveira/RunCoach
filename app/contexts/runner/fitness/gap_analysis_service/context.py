@@ -6,9 +6,9 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.time_utils import local_today
+from app.core.time_utils import to_date as _to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
-from app.utils import to_date as _to_date
 
 
 class _PlanGapContext:

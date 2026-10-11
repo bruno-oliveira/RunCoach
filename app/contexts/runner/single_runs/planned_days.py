@@ -17,8 +17,8 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import to_date
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
-from app.utils import to_date
 
 _NOT_A_RUN = ("rest", "strength")
 

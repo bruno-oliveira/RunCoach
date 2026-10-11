@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.plan.adaptation import AdaptationService, type_swapper
 from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
-from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.plan.week_adjustment_service import (
     apply_week_action,
     swap_week_days,
@@ -25,6 +24,7 @@ from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.dependencies import get_current_user, get_db, get_intervals_service
 from app.models import TrainingPlan, User
+from app.web.plan_access import get_plan_or_404
 
 logger = logging.getLogger(__name__)
 

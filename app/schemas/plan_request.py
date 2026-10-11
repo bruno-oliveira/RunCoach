@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field, model_validator
 if TYPE_CHECKING:
     from app.core.training.physiology.environment import EnvironmentalConditions
 
-from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.core.training.profiles.backyard_profile import (
     BACKYARD_LOOP_KM,
     BACKYARD_LOOP_MAX_ELEVATION_M,
@@ -23,7 +22,11 @@ from app.core.training.profiles.backyard_profile import (
     classify_backyard,
 )
 from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
-from app.core.training.training_config import get_constraints
+from app.core.training.training_config import (
+    DISTANCE_NAMES,
+    SUPPORTED_DISTANCES,
+    get_constraints,
+)
 from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,

@@ -10,7 +10,7 @@ segment-based workout structure.
 import logging
 from typing import Any, Dict, List, Optional
 
-from app.constants import SUPPORTED_DISTANCES
+from app.contexts.plan.generators.plan_passes import install_race_day
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training.periodization import mileage_progression, phase_calculator
 from app.core.training.periodization.strength_plan import derive_experience_level
@@ -20,6 +20,7 @@ from app.core.training.physiology.goal_pace_model import (
     progressive_pace_zones,
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.training_config import SUPPORTED_DISTANCES
 from app.core.training.workouts.workout_builders import attach_strength_sessions
 from app.exceptions import PlanGenerationException
 
@@ -33,7 +34,6 @@ from .performance_workout_builders import (
 )
 from .phase_scaffold import build_phases_rich
 from .plan_finalizer import finalize_plan
-from .plan_generator import _install_race_day
 from .segment_steps import apply_steps_model
 
 logger = logging.getLogger(__name__)
@@ -562,7 +562,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
         # final week's zones, i.e. paces at full goal fitness.
         zones, final_vdot_zones = _zones_for_week(weeks)
 
-        _install_race_day(
+        install_race_day(
             weekly_plans,
             target_distance,
             final_vdot_zones,

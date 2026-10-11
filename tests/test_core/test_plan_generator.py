@@ -16,11 +16,11 @@ class TestTrainingPlanGenerator:
     """Tests for TrainingPlanGenerator class."""
 
     def test_weekly_cap_uses_single_constant(self):
-        """plan_generator must derive the 10% cap from
+        """The ramp-cap pass must derive the 10% cap from
         mileage_progression.WEEK_OVER_WEEK_CAP, not hardcoded literals."""
         import inspect
 
-        from app.contexts.plan.generators import plan_generator as pg
+        from app.contexts.plan.generators.plan_passes import ramp_cap as pg
 
         src = inspect.getsource(pg)
         assert "WEEK_OVER_WEEK_CAP" in src, (

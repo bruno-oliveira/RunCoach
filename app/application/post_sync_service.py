@@ -20,11 +20,11 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.contexts.runner.single_runs import claim_completed_single_runs
 from app.core.time_utils import local_today
+from app.core.time_utils import to_date as _to_date
 from app.core.training.adaptation.thresholds import AUTO_ADJUST_MIN_DELTA
 from app.core.training.periodization.plan_calendar import plan_has_ended
 from app.models import TrainingPlan
 from app.models.user import User
-from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 

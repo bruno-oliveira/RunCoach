@@ -134,17 +134,33 @@ sibling context at module scope. Cross-context collaboration goes through
 `if TYPE_CHECKING:`) — only eager, module-level edges are rejected, because
 those are the ones that couple the import graphs.
 
-The rest of the rule, by convention:
+The rest of the rule is enforced by
+`tests/test_architecture/test_layer_boundaries.py`, per layer:
 
 - `web/routers/` → `application/`, `contexts/`, `schemas/`
-- `application/` → `contexts/`, `core/`, `domain/`
-- `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy
-- `infrastructure/` implements the Protocols in `domain/`
+- `application/` → `contexts/`, `core/`, `domain/`, `infrastructure/` — never
+  `web/` or `dependencies/` at module scope
+- `contexts/` import nothing from `web/`, `dependencies/`, `application/` or
+  `infrastructure/` at module scope, and no FastAPI. Anything that speaks
+  `Request`/`HTTPException` or renders a template belongs in `web/`
+  (`web/plan_access.py`, `web/templating.py`, `web/rate_limit.py`)
+- `core/` imports nothing from above it, and no SQLAlchemy or FastAPI — checked
+  at **every** depth, deferred imports included
+- `infrastructure/` implements the Protocols in `domain/` and imports no
+  context. Orchestration that touches two contexts is `application/`, however
+  much it looks like "sync plumbing" (`application/post_sync_service.py`)
+- nothing lives at the root of `app/` but `main.py` and `exceptions.py`: a
+  module there has no layer, so every layer ends up importing it. Pace and
+  distance text is `core/formatting.py`; date coercion is `core/time_utils.py`
+
+`app.infrastructure.config` is the one leaf any layer may read. The test's
+`KNOWN_EXCEPTIONS` is a ratchet — the edges still to remove, each with its
+reason — and a stale entry fails the build, so it only shrinks.
 
 `pyrightconfig.json` type-checks the whole `app` package — `domain`, `core`,
 `models`, `schemas`, `dependencies`, `infrastructure`, `application`, `web`,
-`contexts` and the loose modules at the root of `app/` (`main.py`, `utils.py`,
-`rate_limit.py`, …). Keeping logic pure is what makes it checkable; pushing
+`contexts` and `main.py` / `exceptions.py` at the root of `app/`. Keeping logic
+pure is what makes it checkable; pushing
 calculation down into `core/` is the established direction of travel. `tests/`
 and `scripts/` are deliberately outside it.
 
@@ -182,7 +198,7 @@ cover it:
 
 Writes go through repositories (`SQLAlchemy{Plan,Run,User,Readiness,FavoriteRecipe}Repository`,
 implementing the Protocols in `app/domain/repositories.py`). Read-heavy paths use
-query modules (`app/contexts/runner/queries.py`, `app/contexts/plan/plan_lookup.py`).
+query modules (`app/contexts/runner/queries.py`).
 Routers should carry no raw `db.query` — there is one remaining exception in
 `notifications.py`; don't add more.
 
@@ -191,7 +207,15 @@ Routers should carry no raw `db.query` — there is one remaining exception in
 - **Plan generation** — `contexts/plan/generators/` orchestrates; the actual
   math lives in `core/training/periodization/` (phases, mileage, long-run,
   quality caps), `core/training/workouts/` (builders, catalog, steps), and
-  `core/training/physiology/` (VDOT, zones). `plan_structure_guard.py` and
+  `core/training/physiology/` (VDOT, zones). `plan_generator.generate_plan`
+  reads as the life of a plan: refuse (`engine_floors.py`), resolve paces /
+  frequency / a reachable progression, build each week
+  (`weekly_plan_builder/`: `daily_workouts` sizes, places and builds the day
+  cards, the `orchestrator` fits them to the budget, and on the road
+  `long_run_contract` settles the long run last), then the plan-level passes
+  in `plan_passes/` —
+  `ramp_cap` per week as it is built, `smoothing` over the finished plan,
+  `race_week` last. `plan_structure_guard.py` and
   `plan_validator.py` are the post-generation sanity checks.
   **Tuesday and Friday carry no run** — `FREE_WEEKDAYS` in
   `core/training/tuning.py`, read by every day-placement site (the week
@@ -429,7 +453,7 @@ week" flipping late. The web layer captures the browser's IANA zone
 4. Persisted as a normalized tree — `training_plans` → `weekly_plans` →
    `daily_workouts` — plus a denormalized `plan_data` JSON snapshot for rendering.
 5. Activities arrive from Intervals.icu (manual sync or the scheduled sweep) →
-   `auto_map_and_adjust` (`infrastructure/integrations/post_sync_service.py`,
+   `auto_map_and_adjust` (`application/post_sync_service.py`,
    the single entry point both paths share) re-paces future weeks → the watch
    mirror re-syncs.
 

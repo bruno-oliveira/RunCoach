@@ -13,6 +13,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.application.post_sync_service import (
+    _auto_adjust_headline,
+    _race_headline,
+    _recalibrate_headline,
+    recalibrate_from_race,
+)
 from app.contexts.plan.adaptation import backtest as bt
 from app.contexts.plan.adaptation.reconcile import pace_zones_for
 from app.contexts.plan.adaptation.vdot_recalibrator import (
@@ -26,12 +32,6 @@ from app.contexts.plan.plan_type_registry import (
 from app.core.time_utils import utcnow_naive
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_steps import fill_step_paces
-from app.infrastructure.integrations.post_sync_service import (
-    _auto_adjust_headline,
-    _race_headline,
-    _recalibrate_headline,
-    recalibrate_from_race,
-)
 from app.models import RunLog
 
 LOGGED_VDOT = 41.0

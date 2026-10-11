@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.template_helpers import create_templates
+from app.web.templating import create_templates
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
 

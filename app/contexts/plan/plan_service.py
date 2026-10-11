@@ -10,11 +10,11 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.formatting import parse_race_time_to_seconds
 from app.domain.repositories import IPlanRepository, IUserRepository
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
 from app.schemas import PlanRequest
-from app.utils import parse_race_time_to_seconds
 
 from . import plan_creation_helpers as _create
 from . import plan_lifecycle_service as _lifecycle

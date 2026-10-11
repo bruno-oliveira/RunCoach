@@ -28,6 +28,7 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
     build_workout_for_type,
 )
 from app.contexts.plan.generators.workout_scaler import is_prescriptive
+from app.core.formatting import format_km, format_pace
 from app.core.training.profiles.backyard_profile import BackyardProfile
 from app.core.training.profiles.backyard_simulation import LoopSimulation
 from app.core.training.training_config import MIN_VIABLE_RUN_KM
@@ -37,7 +38,6 @@ from app.core.training.workouts.workout_steps.backyard import (
     build_loop_simulation_steps,
     build_turnaround_drill_steps,
 )
-from app.utils import format_km, format_pace
 
 # The simulation takes the long-run slot, which the scheduler anchors on
 # Saturday — leaving Sunday free for the second day the format demands.

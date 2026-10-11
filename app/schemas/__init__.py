@@ -1,8 +1,5 @@
 """Pydantic schemas — re-exported from domain-specific modules."""
 
-# HealthResponse moved to app.infrastructure.health to avoid the
-# schemas → infrastructure dependency. Re-exported for backward compat.
-from app.infrastructure.health import HealthResponse
 from app.schemas.auth_schemas import (
     AuthResponse,
     GoogleAuthRequest,
@@ -50,7 +47,6 @@ from app.schemas.single_run_schemas import (
 __all__ = [
     "AuthResponse",
     "GoogleAuthRequest",
-    "HealthResponse",
     "IntervalsPushRequest",
     "IntervalsPushResponse",
     "IntervalsPushWeekRequest",

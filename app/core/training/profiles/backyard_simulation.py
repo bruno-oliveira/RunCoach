@@ -38,12 +38,12 @@ from dataclasses import dataclass
 from math import ceil
 from typing import Dict, List, Literal, Optional
 
+from app.core.formatting import format_pace
 from app.core.training.periodization import phase_calculator
 from app.core.training.profiles.backyard_profile import (
     BackyardProfile,
     backyard_summary,
 )
-from app.utils import format_pace
 
 SimulationRole = Literal["introduction", "progression", "night", "dress_rehearsal"]
 StartTime = Literal["morning", "evening"]

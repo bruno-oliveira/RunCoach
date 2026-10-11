@@ -8,13 +8,13 @@ the prose never drift apart.
 import re
 from typing import Any, Callable, Dict, Optional
 
+from app.core.formatting import format_km, truncate_km
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.key_workout_data import WORKOUTS as _CATALOG
 from app.core.training.workouts.workout_steps.key_workout_builders import (
     TIGHT_BUDGET_RECOVERY_S,
 )
 from app.core.training.workouts.workout_steps.primitives import _wucd_m, wucd_profile
-from app.utils import format_km, truncate_km
 
 # Catalog type per workout id, for scoping the warm-up/cool-down profile when
 # a rewrite is invoked with only the id at hand (see

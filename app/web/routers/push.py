@@ -31,7 +31,7 @@ from app.infrastructure.notifications.webpush import (
     is_allowed_endpoint,
 )
 from app.models import PushSubscription, User
-from app.rate_limit import push_subscribe_limiter, push_test_limiter
+from app.web.rate_limit import push_subscribe_limiter, push_test_limiter
 
 logger = logging.getLogger(__name__)
 

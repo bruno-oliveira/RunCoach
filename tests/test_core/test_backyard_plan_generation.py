@@ -8,9 +8,9 @@ into an ordinary trail plan.
 
 import pytest
 
-from app.contexts.plan.generators.plan_generator import (
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_passes.race_week import (
     BACKYARD_RACE_DAY_NUMBER,
-    TrainingPlanGenerator,
 )
 from app.core.training.profiles.backyard_profile import classify_backyard
 from app.core.training.profiles.trail_profile import classify_trail

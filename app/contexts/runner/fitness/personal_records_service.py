@@ -8,9 +8,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.formatting import format_pace, format_pace_bare
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
-from app.utils import format_pace, format_pace_bare
 
 # Standard distances with tolerance for GPS drift
 DISTANCE_BUCKETS = [

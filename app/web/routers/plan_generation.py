@@ -12,9 +12,9 @@ from sqlalchemy.orm import Session
 from app.application.plan_view_service import PlanViewService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.performance_service import PerformanceService
+from app.core.formatting import parse_time_to_pace
 from app.core.training.profiles.backyard_profile import BACKYARD_LOOP_KM
 from app.dependencies import (
     get_db,
@@ -36,15 +36,14 @@ from app.exceptions import (
 )
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
-from app.rate_limit import plan_generation_limiter
 from app.schemas import PerformancePlanRequest, PlanRequest
-from app.template_helpers import create_templates
-from app.utils import parse_time_to_pace
+from app.web.plan_access import error_response, get_plan_or_404
+from app.web.rate_limit import plan_generation_limiter
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
-templates = create_templates()
 
 
 _VALUE_ERROR_PREFIX = "Value error, "

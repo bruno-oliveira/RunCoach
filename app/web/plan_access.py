@@ -1,8 +1,9 @@
-"""Plan fetching with ownership validation.
+"""Loading a plan for a request: 404 when it is missing, 403 when it is not theirs.
 
-Lives in the plan context because the primary concern is loading a plan by
-ID and verifying the caller's relationship to it; the auth check is a
-secondary policy applied during that lookup.
+Every plan route starts by turning a plan id and a caller into a
+``TrainingPlan`` or an HTTP refusal. That is a web concern — it speaks
+``HTTPException`` and renders ``index.html`` — so it lives with the routers
+rather than in the plan context, which should not know what a request is.
 """
 
 from typing import Any, Optional
@@ -14,9 +15,7 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import verify_plan_ownership
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
-from app.template_helpers import create_templates
-
-templates = create_templates()
+from app.web.templating import templates
 
 
 def error_response(

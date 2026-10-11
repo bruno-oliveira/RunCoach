@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.constants import WORKOUT_TYPES
-from app.utils import sanitize_user_text
+from app.core.training.workouts.workout_registry import (
+    ALL_WORKOUT_TYPE_NAMES as WORKOUT_TYPES,
+)
+from app.schemas.sanitize import sanitize_user_text
 
 
 class RunLogBase(BaseModel):

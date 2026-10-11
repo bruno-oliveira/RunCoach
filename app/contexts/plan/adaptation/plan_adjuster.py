@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import to_date as _to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import (
     DailyWorkout,
@@ -16,8 +17,7 @@ from app.models import (
     TrainingPlan,
     WeeklyPlan,
 )
-from app.utils import persist_json
-from app.utils import to_date as _to_date
+from app.models.json_columns import persist_json
 
 from . import change_reasons as _reasons
 from ._helpers import (

@@ -8,10 +8,8 @@ the rest of the pipeline relies on (chiefly: nothing may rescale it).
 
 import pytest
 
-from app.contexts.plan.generators.plan_generator import (
-    RACE_DAY_NUMBER,
-    TrainingPlanGenerator,
-)
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_passes.race_week import RACE_DAY_NUMBER
 from app.contexts.plan.generators.workout_scaler import is_prescriptive, set_distance
 from app.core.training.periodization.training_constants import training_km
 from app.core.training.profiles.trail_profile import classify_trail

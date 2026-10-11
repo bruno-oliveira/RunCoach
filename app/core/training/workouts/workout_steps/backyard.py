@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from app.core.formatting import format_km, format_pace
 from app.core.training.workouts.workout_steps.primitives import _pace_str, _step
-from app.utils import format_km, format_pace
 
 # Loop-pace repeats stand still between reps rather than jogging: the whole
 # point is rehearsing a cold restart, and a jog recovery quietly removes it.

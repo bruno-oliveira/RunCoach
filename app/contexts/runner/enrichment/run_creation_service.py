@@ -23,7 +23,6 @@ from app.contexts.runner.queries import (
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.quality_scorer import calculate_quality_score
-from app.dependencies import validate_plan_ownership
 from app.models import DailyWorkout, RunLog, User
 from app.schemas import RunLogCreate, RunLogResponse
 
@@ -78,14 +77,20 @@ class RunCreationService:
         current_user: User,
         db: Session,
     ) -> Optional[DailyWorkout]:
-        if run_log.training_plan_id:
-            validate_plan_ownership(run_log.training_plan_id, db, current_user)
+        from app.application.ports import SQLAlchemyPlanRepository
+
+        plan_repo = SQLAlchemyPlanRepository(db)
+        if run_log.training_plan_id and not plan_repo.get_for_user(
+            run_log.training_plan_id, current_user.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Training plan not found or access denied",
+            )
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
-            from app.application.ports import SQLAlchemyPlanRepository
-
-            validated_workout = SQLAlchemyPlanRepository(db).get_user_workout(
+            validated_workout = plan_repo.get_user_workout(
                 run_log.daily_workout_id, current_user.id
             )
             if not validated_workout:

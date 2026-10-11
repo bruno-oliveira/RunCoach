@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from app.core.formatting import format_km
 from app.core.training.workouts.workout_steps.primitives import (
     _cooldown,
     _jog_pace_str,
@@ -17,7 +18,6 @@ from app.core.training.workouts.workout_steps.primitives import (
     _warmup,
     _wucd_m,
 )
-from app.utils import format_km
 
 
 def _dur_label(seconds: int) -> str:

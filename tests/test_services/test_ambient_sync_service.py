@@ -14,12 +14,12 @@ import pytest
 
 from app.application import ambient_sync_service as ambient_module
 from app.application.ambient_sync_service import AmbientSyncService
+from app.core.time_utils import TimestampAdapter
 from app.infrastructure.config import settings
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
 )
 from app.models import RunLog, TrainingPlan, User
-from app.utils import TimestampAdapter
 
 
 class _FakeSync:

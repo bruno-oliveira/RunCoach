@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.utils import to_date
+from app.core.time_utils import to_date
 
 
 def compute_quality_drift(

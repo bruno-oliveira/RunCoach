@@ -9,9 +9,9 @@ allocation, quality caps, and weekly scaling.
 
 import pytest
 
-from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.periodization.training_constants import training_km
+from app.core.training.training_config import DISTANCE_NAMES, SUPPORTED_DISTANCES
 
 # ── Shared fixtures & helpers ──────────────────────────────────────────────
 

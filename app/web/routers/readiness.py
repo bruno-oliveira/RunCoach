@@ -17,8 +17,8 @@ from app.infrastructure.integrations.intervals_service import (
     has_wellness_scope,
 )
 from app.models import ReadinessLog, User
-from app.rate_limit import wellness_prefill_limiter
 from app.schemas import ReadinessCheckInCreate, ReadinessCheckInResponse
+from app.web.rate_limit import wellness_prefill_limiter
 
 logger = logging.getLogger(__name__)
 

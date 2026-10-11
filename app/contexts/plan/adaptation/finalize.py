@@ -26,7 +26,7 @@ from app.contexts.plan.generators.plan_structure_guard import check_plan_structu
 from app.core.training.workouts import key_workout_library as _kwlib
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.models import TrainingPlan, WeeklyPlan
-from app.utils import persist_json
+from app.models.json_columns import persist_json
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups
 from .reconcile import pace_zones_for, reconcile_plan_data_to_orm

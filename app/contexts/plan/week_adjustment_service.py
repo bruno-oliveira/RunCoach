@@ -18,10 +18,10 @@ from app.contexts.plan.adaptation._helpers import (
 )
 from app.contexts.plan.adaptation.finalize import finalize_plan_mutation
 from app.contexts.plan.adaptation.week_adjuster import apply_adjustment_to_future_weeks
+from app.core.time_utils import to_date as _to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.exceptions import ConflictException, NotFoundException, ValidationException
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
-from app.utils import to_date as _to_date
 
 _BUMP_MULTIPLIER = 1.08
 _REDUCE_MULTIPLIER = 0.70

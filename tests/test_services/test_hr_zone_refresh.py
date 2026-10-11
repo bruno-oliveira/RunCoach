@@ -14,7 +14,7 @@ from app.contexts.runner.fitness.hr_zone_service import (
 )
 from app.core.time_utils import local_today
 from app.models import TrainingPlan, User
-from app.utils import persist_json
+from app.models.json_columns import persist_json
 
 
 def _uid() -> str:

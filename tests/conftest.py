@@ -60,7 +60,7 @@ def _reset_rate_limiters():
     ``clear()`` reaches through to the limiter's store, so it works
     whether that store is the in-memory default or a shared one.
     """
-    from app import rate_limit
+    from app.web import rate_limit
 
     for name in dir(rate_limit):
         obj = getattr(rate_limit, name)
