@@ -32,10 +32,11 @@ from app.core.coaching.training_read import (
     Week,
     read_training,
 )
+from app.core.formatting import parse_race_time_to_seconds
+from app.core.time_utils import to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog, TrainingPlan, User
-from app.utils import parse_race_time_to_seconds, to_date
 
 # Weeks drawn in the volume strip (the last one is the week in progress).
 CHART_WEEKS = 8

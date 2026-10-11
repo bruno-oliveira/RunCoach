@@ -33,8 +33,8 @@ from app.core.coaching.adaptation_math import (
 from app.core.coaching.adaptation_math import (
     count_recent_race_efforts as _count_recent_race_efforts,
 )
+from app.core.time_utils import to_date as _to_date
 from app.models import RunLog
-from app.utils import to_date as _to_date
 
 
 def _volume_signal(

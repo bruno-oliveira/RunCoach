@@ -18,12 +18,12 @@ from app.contexts.runner.single_runs import SQLAlchemySingleRunRepository
 from app.dependencies import get_current_user, get_db, get_intervals_service
 from app.infrastructure.integrations.intervals_service import IntervalsService
 from app.models import SingleRun, User
-from app.rate_limit import intervals_push_limiter, single_run_limiter
 from app.schemas import SingleRunCreate, SingleRunListResponse, SingleRunResponse
 from app.schemas.single_run_schemas import (
     SingleRunCompletedRun,
     SingleRunReviewOut,
 )
+from app.web.rate_limit import intervals_push_limiter, single_run_limiter
 
 logger = logging.getLogger(__name__)
 

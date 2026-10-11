@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, to_date
 from app.core.training.periodization.plan_calendar import (
     compute_current_week,
     plan_has_ended,
@@ -26,9 +26,9 @@ from app.core.training.physiology.hr_zone_calculator import (
     HRZoneCalculator,
     _lthr_is_usable,
 )
+from app.models.json_columns import persist_json
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
-from app.utils import persist_json, to_date
 
 logger = logging.getLogger(__name__)
 

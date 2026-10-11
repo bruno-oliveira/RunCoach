@@ -18,12 +18,11 @@ from app.dependencies import (
     get_plan_view_service,
     verify_plan_ownership,
 )
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["nutrition"])
-templates = create_templates()
 
 
 @router.post("/randomize-meals", response_class=HTMLResponse)

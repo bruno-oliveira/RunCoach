@@ -7,9 +7,9 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import to_date as _to_date
 from app.core.training.workouts.workout_registry import QUALITY_STIMULUS_TYPES
 from app.models import DailyWorkout, RunLog, WeeklyPlan
-from app.utils import to_date as _to_date
 
 from ._helpers import today_date
 

@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
-from app.utils import format_pace_bare
+from app.core.formatting import format_pace_bare
 
 # --- Plausibility filters -----------------------------------------------------
 

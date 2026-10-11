@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from app.core.formatting import format_km
 from app.core.training.workouts.workout_steps.primitives import (
     _COOLDOWN_M,
     _WARMUP_M,
@@ -14,7 +15,6 @@ from app.core.training.workouts.workout_steps.primitives import (
     _warmup,
     _wucd_m,
 )
-from app.utils import format_km
 
 
 def cruise_recovery_m(main_m: int) -> int:

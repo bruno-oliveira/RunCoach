@@ -21,8 +21,8 @@ import statistics
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional
 
+from app.core.formatting import format_pace
 from app.core.training.physiology.vdot_calculator import TRAIL_ELEVATION_M_PER_KM
-from app.utils import format_pace
 
 # How far back runs speak for the pace the runner jogs at today. Shorter than
 # the 12 weeks fitness is read over: an easy pace drifts with the season, and

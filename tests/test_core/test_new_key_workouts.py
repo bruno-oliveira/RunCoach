@@ -7,6 +7,7 @@ steps that stay on the distance budget where the family is budget-pinned.
 
 import pytest
 
+from app.core.formatting import format_km
 from app.core.training.workouts.key_workout_data import WORKOUTS
 from app.core.training.workouts.key_workout_library.builders import (
     _KEY_WORKOUT_STEP_BUILDERS,
@@ -20,7 +21,6 @@ from app.core.training.workouts.key_workout_library.selection import KeyWorkoutL
 from app.core.training.workouts.workout_steps.metrics import (
     _compute_distance_from_steps,
 )
-from app.utils import format_km
 
 NEW_IDS = [
     "5k_thirty_thirties",

@@ -37,7 +37,7 @@ from app.contexts.plan.plan_helpers import (
 from app.contexts.plan.recovery_block_service import RecoveryOffer, recovery_offer
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.coaching.intensity_split import TARGET_EASY_SHARE
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, to_date
 from app.core.training.workouts.single_run import (
     SIMILAR_DISTANCE_MIN_KM,
     SIMILAR_DISTANCE_SHARE,
@@ -48,11 +48,9 @@ from app.core.training.workouts.single_run import (
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
-from app.template_helpers import create_templates
-from app.utils import to_date
+from app.web.templating import templates
 
 router = APIRouter(tags=["pages"])
-templates = create_templates()
 
 
 @router.get("/", response_class=HTMLResponse)

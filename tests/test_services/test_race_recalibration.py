@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from app.application.post_sync_service import recalibrate_from_race
 from app.contexts.plan.adaptation import backtest as bt
 from app.contexts.plan.adaptation.vdot_recalibrator import recalibrate_zones_only
 from app.dependencies import get_current_user, get_db
-from app.infrastructure.integrations.post_sync_service import recalibrate_from_race
 from app.main import app
 from app.models import RunLog
 

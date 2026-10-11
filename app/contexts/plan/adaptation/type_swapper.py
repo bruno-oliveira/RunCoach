@@ -12,10 +12,10 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import to_date as _to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY
 from app.models import DailyWorkout, RunLog, WeeklyPlan
-from app.utils import to_date as _to_date
 
 from ._helpers import today_date
 from .finalize import clear_session_payload, finalize_plan_mutation

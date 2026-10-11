@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import to_date as _to_date
 from app.core.training.adaptation.thresholds import (
     PACE_FAST_DEVIATION,
     PACE_SLOW_DEVIATION,
@@ -19,8 +20,7 @@ from app.core.training.physiology.personal_easy_band import (
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_steps import fill_step_paces, repace_steps
 from app.models import RunLog, TrainingPlan
-from app.utils import persist_json
-from app.utils import to_date as _to_date
+from app.models.json_columns import persist_json
 
 from ._helpers import parse_plan_data_lookups, today_date
 from .reconcile import pace_zones_for
@@ -331,7 +331,7 @@ def _apply_recalibration(
             if vdot_key and vdot_key in new_zones:
                 new_pace = new_zones[vdot_key].get("pace_min_km")
                 if new_pace:
-                    from app.utils import format_pace
+                    from app.core.formatting import format_pace
 
                     workout["target_pace"] = new_pace
                     workout["target_pace_formatted"] = format_pace(new_pace)
@@ -350,7 +350,7 @@ def _apply_recalibration(
             if vdot_key and vdot_key in new_zones:
                 new_pace = new_zones[vdot_key].get("pace_min_km")
                 if new_pace:
-                    from app.utils import format_pace
+                    from app.core.formatting import format_pace
 
                     seg["pace_raw"] = new_pace
                     seg["pace_formatted"] = format_pace(new_pace)

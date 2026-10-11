@@ -7,12 +7,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.dependencies import get_optional_user
 from app.models import User
-from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["performance-pages"])
-templates = create_templates()
 
 
 @router.get("/performance-training", response_class=HTMLResponse)

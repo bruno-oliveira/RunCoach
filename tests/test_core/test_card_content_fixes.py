@@ -13,7 +13,7 @@ from app.core.coaching.coaching_notes_generator import (
     generate_coaching_note,
     heal_legacy_rationale,
 )
-from app.template_helpers import create_templates
+from app.web.templating import create_templates
 
 LEGACY = (
     "Short strides to reinforce running form and leg turnover. Even in base "

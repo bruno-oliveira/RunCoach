@@ -8,6 +8,7 @@ zones.
 from typing import Any, Dict, List, Optional
 
 from app.core.coaching.training_tips import get_tips_for_week
+from app.core.formatting import format_km
 from app.core.training.periodization.strength_plan import (
     generate_strength_session as _build_strength_session,
 )
@@ -16,7 +17,6 @@ from app.core.training.periodization.strength_plan import (
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import workout_steps
-from app.utils import format_km
 
 
 def generate_rest_day(day: int) -> Dict[str, Any]:

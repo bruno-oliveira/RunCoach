@@ -9,9 +9,9 @@ in exactly one place.
 
 from typing import Any, Dict, Mapping, Tuple
 
+from app.core.formatting import format_km
+from app.core.formatting import format_pace as _shared_format_pace
 from app.core.training.workouts.workout_steps import _wucd_m, _wucd_m_for_work
-from app.utils import format_km
-from app.utils import format_pace as _shared_format_pace
 
 
 def estimate_duration_min(segments: list) -> int:

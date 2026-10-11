@@ -83,7 +83,7 @@ def _pace_from_velocity(v: float) -> float:
 
 def _format_pace(pace_min_km: float) -> str:
     """Format decimal min/km as MM:SS/km string."""
-    from app.utils import format_pace
+    from app.core.formatting import format_pace
 
     return format_pace(pace_min_km)
 
@@ -281,7 +281,7 @@ class VDOTCalculator:
         Returns:
             Total seconds, or None if unparseable
         """
-        from app.utils import parse_race_time_to_seconds
+        from app.core.formatting import parse_race_time_to_seconds
 
         return parse_race_time_to_seconds(time_str)
 

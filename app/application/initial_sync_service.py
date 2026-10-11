@@ -1,14 +1,18 @@
-"""Post-sync orchestration for Intervals.icu activity imports."""
+"""The first Intervals.icu import after a runner connects.
+
+Runs as a background task with its own session, then hands what it imported
+to the same post-sync entry point every later sync uses.
+"""
 
 import logging
 
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.plan.adaptation import AdaptationService
-from app.infrastructure.config import settings
-from app.infrastructure.integrations.post_sync_service import (
+from app.application.post_sync_service import (
     auto_map_and_adjust,
 )
-from app.utils import TimestampAdapter
+from app.contexts.auth.repositories import SQLAlchemyUserRepository
+from app.contexts.plan.adaptation import AdaptationService
+from app.core.time_utils import TimestampAdapter
+from app.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
 

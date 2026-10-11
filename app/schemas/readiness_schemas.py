@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.utils import sanitize_user_text
+from app.schemas.sanitize import sanitize_user_text
 
 # The self-reported inputs that carry a readiness score. At least one must be
 # present for a check-in to mean anything.

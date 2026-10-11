@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
+from app.core.formatting import format_km
 from app.core.training.workouts.workout_steps.intervals_export import (
     _parse_pace_bounds,
     is_hill,
@@ -32,7 +33,6 @@ from app.core.training.workouts.workout_steps.structure import (
     group_steps,
     is_recovery,
 )
-from app.utils import format_km
 
 # Effort level 0 (standing) .. 5 (flat out). Drives the profile bar's height
 # and colour, and the dot beside each step.

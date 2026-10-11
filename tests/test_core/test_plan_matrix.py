@@ -64,7 +64,7 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.constants import DISTANCE_CONSTRAINTS
+from app.application.post_sync_service import auto_map_and_adjust
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.plan_generator import (
     TrainingPlanGenerator,
@@ -98,12 +98,12 @@ from app.core.training.profiles.trail_profile import (
     TrailProfile,
     classify_trail,
 )
+from app.core.training.training_config import DISTANCE_CONSTRAINTS
 from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,
     ZeroMileageUnsupportedException,
 )
-from app.infrastructure.integrations.post_sync_service import auto_map_and_adjust
 from app.models import RunLog, TrainingPlan, User
 from app.schemas.plan_request import PlanRequest
 

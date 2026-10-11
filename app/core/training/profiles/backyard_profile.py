@@ -42,13 +42,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Literal
 
+from app.core.formatting import format_pace
 from app.core.training.profiles.trail_profile import (
     TRAIL_DISTANCE_MAX_KM,
     TRAIL_ELEVATION_MAX_M,
     TrailProfile,
     classify_trail,
 )
-from app.utils import format_pace
 
 # The standard loop: 4.167 miles, sized so that 24 loops is exactly 100 miles
 # in 24 hours. Every backyard race in the world uses this distance.

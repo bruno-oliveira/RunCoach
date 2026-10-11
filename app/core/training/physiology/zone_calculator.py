@@ -15,12 +15,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from app.core.formatting import format_pace, format_pace_bare
 from app.core.training.physiology.hr_zone_calculator import (
     TRAINING_ZONE_HR_PERCENTAGES,
     HRZoneCalculator,
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
-from app.utils import format_pace, format_pace_bare
 
 _FALLBACK_PACE_MIN_KM = 5.5
 

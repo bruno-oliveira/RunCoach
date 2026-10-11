@@ -8,10 +8,9 @@ from app.application.coach_read_service import build_coach_page
 from app.core.time_utils import local_today
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.config import settings
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 router = APIRouter(tags=["coach-page"])
-templates = create_templates()
 
 
 @router.get("/coach", response_class=HTMLResponse)

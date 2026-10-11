@@ -34,10 +34,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import to_date as _to_date
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
-from app.utils import to_date as _to_date
 
 from ._helpers import (
     ANNOTATION_RE,

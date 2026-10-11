@@ -17,12 +17,11 @@ from app.core.training.workouts.workout_steps.intervals_export import (
 )
 from app.dependencies import get_admin_user, get_db
 from app.schemas import IntervalsPushRequest
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 admin_router = APIRouter(tags=["admin"])
-templates = create_templates()
 
 
 @admin_router.get("/admin", response_class=HTMLResponse)

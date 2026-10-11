@@ -14,10 +14,10 @@ from app.contexts.plan.generators.workout_builder_base import (
     generate_easy_run,
     reconcile_workout_after_cap,
 )
+from app.core.formatting import format_km
+from app.core.formatting import format_pace as _shared_format_pace
 from app.core.training.profiles.road_profile import classify_road
 from app.core.training.workouts.workout_steps import _wucd_m_for_work
-from app.utils import format_km
-from app.utils import format_pace as _shared_format_pace
 
 # ``reconcile_workout_after_cap`` / ``_regenerate_description`` now live in
 # workout_builder_base so the fitness generator can share them; re-exported

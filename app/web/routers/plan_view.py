@@ -12,11 +12,7 @@ from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_helpers import (
-    get_plan_or_404,
-    plan_view_context,
-    today_card_for_plan,
-)
+from app.contexts.plan.plan_helpers import plan_view_context, today_card_for_plan
 from app.contexts.plan.plan_type_registry import get_handler_for_plan
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.dependencies import (
@@ -27,13 +23,13 @@ from app.dependencies import (
     get_plan_view_service,
 )
 from app.models import User
-from app.template_helpers import create_templates
-from app.utils import persist_json
+from app.models.json_columns import persist_json
+from app.web.plan_access import get_plan_or_404
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
-templates = create_templates()
 
 
 @router.get("/plan/{plan_id}", response_class=HTMLResponse)

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from app.application.plan_view_service import PlanViewService
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
+from app.contexts.plan.plan_helpers import plan_view_context
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
 from app.contexts.plan.recovery_block_service import (
@@ -45,13 +45,13 @@ from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.integrations.fit_service import FITService
 from app.models import User
-from app.rate_limit import fit_download_limiter, plan_generation_limiter
-from app.template_helpers import create_templates
+from app.web.plan_access import get_plan_or_404
+from app.web.rate_limit import fit_download_limiter, plan_generation_limiter
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
-templates = create_templates()
 
 
 # ---------------------------------------------------------------------------

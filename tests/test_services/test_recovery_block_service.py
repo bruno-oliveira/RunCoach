@@ -414,8 +414,8 @@ def test_block_mirrors_to_the_watch_as_easy_structured_runs(test_db, runner):
 
 
 def test_logged_runs_adapt_the_block_without_error(test_db, runner):
+    from app.application.post_sync_service import auto_map_and_adjust
     from app.contexts.plan.adaptation import AdaptationService
-    from app.infrastructure.integrations.post_sync_service import auto_map_and_adjust
     from app.models import RunLog
 
     today = local_today()

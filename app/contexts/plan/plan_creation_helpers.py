@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.formatting import parse_race_time_to_seconds
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.profiles.road_profile import classify_road
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 from app.schemas import PlanRequest
-from app.utils import parse_race_time_to_seconds
 
 # Half a minute of tolerance when matching an already-persisted race effort, so
 # regenerating a plan with the same stated race never stacks up duplicate runs.

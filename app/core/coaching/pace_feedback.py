@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from app.utils import format_pace_bare
+from app.core.formatting import format_pace_bare
 
 PACE_TOLERANCES: dict[str, tuple[float, float]] = {
     "easy": (0.10, -0.08),

@@ -1,7 +1,13 @@
 """Shared Jinja2 template configuration.
 
-Provides a pre-configured Jinja2Templates instance with cache-busting
-static_url() global and common filters registered.
+Provides ``templates``, the one pre-configured Jinja2Templates instance every
+router renders through, with the cache-busting static_url() global and the
+common filters registered.
+
+One instance, not one per router: each ``Jinja2Templates`` owns its own
+environment and therefore its own compiled-template cache, so a layout or
+component shared between routers was compiled once per router that rendered
+it — on a machine that scales to zero and pays that again on each wake.
 """
 
 import hashlib
@@ -10,11 +16,11 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.contexts.nutrition.meal_database import meal_type_label, recipe_slug
+from app.core.formatting import format_km, format_pace, format_pace_bare
 from app.core.training.periodization.plan_calendar import next_monday
 from app.core.training.profiles.road_profile import race_name
 from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.config import settings
-from app.utils import format_km, format_pace, format_pace_bare
 
 
 def _build_static_hashes(static_dir: str = "app/web/static") -> dict[str, str]:
@@ -63,3 +69,6 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     tpl.env.filters["recipe_slug"] = recipe_slug
     tpl.env.filters["meal_type_label"] = meal_type_label
     return tpl
+
+
+templates = create_templates()

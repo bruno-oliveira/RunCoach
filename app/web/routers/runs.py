@@ -9,7 +9,9 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.application.post_sync_service import recalibrate_from_race
 from app.application.watch_sync_service import resync_plan_to_watch
+from app.contexts.runner.enrichment.derived_fields import apply_vdot
 from app.contexts.runner.enrichment.run_creation_service import RunCreationService
 from app.contexts.runner.enrichment.run_enrichment_service import run_to_response
 from app.contexts.runner.fitness.feedback_service import FeedbackService
@@ -24,8 +26,6 @@ from app.dependencies import (
 )
 from app.exceptions import ValidationException
 from app.infrastructure.integrations.intervals_service import IntervalsService
-from app.infrastructure.integrations.post_sync_service import recalibrate_from_race
-from app.infrastructure.integrations.run_enrichment import apply_vdot
 from app.models import TrainingPlan, User
 from app.schemas import (
     RunLogCreate,
@@ -363,10 +363,7 @@ def mark_run_as_race(
 
 def _plan_for_run(db: Session, user: User, run) -> Optional[TrainingPlan]:
     """The plan this run belongs to, or the one in progress."""
-    from app.contexts.plan.plan_helpers import (
-        current_active_plan,
-        plan_statuses,
-    )
+    from app.contexts.plan.plan_helpers import current_active_plan, plan_statuses
     from app.contexts.plan.repositories import SQLAlchemyPlanRepository
     from app.core.time_utils import local_today
 

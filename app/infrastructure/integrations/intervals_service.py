@@ -10,13 +10,13 @@ import httpx
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.contexts.runner.fitness.feedback_service import FeedbackService
-from app.infrastructure.config import settings
-from app.infrastructure.integrations.activity_dedup import find_duplicate_run
-from app.infrastructure.integrations.run_enrichment import (
+from app.contexts.runner.enrichment.derived_fields import (
     apply_vdot,
     classify_effort_and_type,
 )
+from app.contexts.runner.fitness.feedback_service import FeedbackService
+from app.infrastructure.config import settings
+from app.infrastructure.integrations.activity_dedup import find_duplicate_run
 from app.models.run_log import RunLog
 from app.models.user import User
 

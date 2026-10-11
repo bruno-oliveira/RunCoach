@@ -5,10 +5,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
-from app.core.training.training_config import get_constraints
+from app.core.formatting import format_pace_bare
+from app.core.training.training_config import (
+    DISTANCE_NAMES,
+    SUPPORTED_DISTANCES,
+    get_constraints,
+)
 from app.exceptions import InadequateBaseException
-from app.utils import format_pace_bare
 
 
 class PerformancePlanRequest(BaseModel):

@@ -276,7 +276,7 @@ class TestFirstPaces:
 
 class TestSyncRecordsTheMove:
     def test_the_history_says_what_changed(self, test_db):
-        from app.infrastructure.integrations.post_sync_service import (
+        from app.application.post_sync_service import (
             _refresh_easy_band_and_record,
         )
 
@@ -292,7 +292,7 @@ class TestSyncRecordsTheMove:
         assert "6:03/km–5:33/km" in event["reason"]
 
     def test_no_move_leaves_no_trace(self, test_db):
-        from app.infrastructure.integrations.post_sync_service import (
+        from app.application.post_sync_service import (
             _refresh_easy_band_and_record,
         )
 

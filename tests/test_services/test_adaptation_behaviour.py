@@ -24,6 +24,7 @@ from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
+from app.application.post_sync_service import auto_map_and_adjust
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
@@ -32,7 +33,6 @@ from app.contexts.plan.plan_creation_helpers import (
     persist_weekly_workouts,
 )
 from app.core.training.periodization.training_constants import training_km
-from app.infrastructure.integrations.post_sync_service import auto_map_and_adjust
 from app.models import RunLog, TrainingPlan, User
 from app.schemas.plan_request import PlanRequest
 

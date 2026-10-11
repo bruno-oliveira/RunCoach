@@ -20,10 +20,16 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.initial_sync_service import (
+    initial_intervals_sync,
+)
 from app.application.intervals_webhook_service import (
     WebhookRejected,
     parse_webhook,
     process_athlete,
+)
+from app.application.post_sync_service import (
+    auto_map_and_adjust,
 )
 from app.application.watch_sync_service import (
     ERROR_AUTH,
@@ -33,8 +39,7 @@ from app.application.watch_sync_service import (
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_helpers import get_plan_or_404
-from app.core.time_utils import local_today, utcnow_naive
+from app.core.time_utils import TimestampAdapter, local_today, utcnow_naive
 from app.core.training.watch_mirror import (
     WINDOW_DAYS,
     build_event,
@@ -48,22 +53,11 @@ from app.dependencies import (
     get_intervals_service,
 )
 from app.infrastructure.config import settings
-from app.infrastructure.integrations.intervals_post_sync_service import (
-    initial_intervals_sync,
-)
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
     IntervalsService,
 )
-from app.infrastructure.integrations.post_sync_service import (
-    auto_map_and_adjust,
-)
 from app.models.user import User
-from app.rate_limit import (
-    intervals_callback_limiter,
-    intervals_push_limiter,
-    intervals_sync_limiter,
-)
 from app.schemas import (
     IntervalsPushRequest,
     IntervalsPushResponse,
@@ -75,8 +69,13 @@ from app.schemas import (
     WatchStatusResponse,
     WatchSyncToggleRequest,
 )
-from app.utils import TimestampAdapter
 from app.web.middleware import _cookie_secure
+from app.web.plan_access import get_plan_or_404
+from app.web.rate_limit import (
+    intervals_callback_limiter,
+    intervals_push_limiter,
+    intervals_sync_limiter,
+)
 
 logger = logging.getLogger(__name__)
 

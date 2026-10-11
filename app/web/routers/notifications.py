@@ -29,12 +29,11 @@ from app.application.push_notification_service import get_push_notifier
 from app.dependencies import get_db, require_cron_secret
 from app.infrastructure.notifications import get_mailer
 from app.models import User
-from app.template_helpers import create_templates
+from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
 notifications_router = APIRouter(tags=["notifications"])
-templates = create_templates()
 
 
 @notifications_router.post(
