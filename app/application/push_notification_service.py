@@ -19,6 +19,7 @@ this module resolves the facts and does the I/O.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -35,6 +36,7 @@ from app.domain.notifications import (
     PushSender,
     PushTarget,
 )
+from app.infrastructure.i18n import localizer
 from app.models import NotificationLog, PushSubscription, RunLog, TrainingPlan, User
 
 if TYPE_CHECKING:
@@ -150,6 +152,14 @@ class PushNotifier:
         if claim is None:
             return False
 
+        # Every push goes through here, so this is the one place that can
+        # promise none leaves in English for a runner who reads Portuguese.
+        # The builders translate before they clip; this catches the rest.
+        localize = localizer(user.language)
+        message = replace(
+            message, title=localize(message.title), body=localize(message.body)
+        )
+
         delivered = False
         for subscription in subscriptions:
             outcome = self.sender.send(
@@ -255,6 +265,7 @@ class PushNotifier:
             plan_id=adapted_plan_id or newest.training_plan_id,
             adaptation_headline=headline,
             extra_runs=max(0, result.imported - 1),
+            localize=localizer(user.language),
         )
         category = prefs.PLAN_CHANGES if headline else prefs.AFTER_RUN
         return self.notify(

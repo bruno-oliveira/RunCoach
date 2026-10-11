@@ -7,6 +7,6 @@ paints that model onto a ReportLab canvas.
 """
 
 from app.infrastructure.export.runna.render import render_sheet
-from app.infrastructure.export.runna.sheet import build_sheet
+from app.infrastructure.export.runna.sheet import build_sheet, localize_sheet
 
-__all__ = ["build_sheet", "render_sheet"]
+__all__ = ["build_sheet", "localize_sheet", "render_sheet"]

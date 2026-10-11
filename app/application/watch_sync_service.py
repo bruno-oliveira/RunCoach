@@ -143,6 +143,7 @@ async def resync_plan_to_watch(plan_id: str, user_id: str, intervals_service) ->
                 user.intervals_athlete_id,
                 diff.to_create,
                 pre_delete=False,
+                language=user.language,
             )
 
         training_plan.watch_event_hashes = diff.next_hashes

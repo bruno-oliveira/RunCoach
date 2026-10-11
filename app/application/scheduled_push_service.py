@@ -41,6 +41,7 @@ from app.core.coaching.push_messages import (
     week_review_message,
 )
 from app.core.time_utils import use_timezone
+from app.infrastructure.i18n import localizer
 from app.models import PushSubscription, TrainingPlan, User
 
 logger = logging.getLogger(__name__)
@@ -147,6 +148,7 @@ class ScheduledPushService:
             readiness_label=card.readiness_label,
             drivers=card.readiness_drivers,
             advisory=card.advisory,
+            localize=localizer(user.language),
         )
         if dry_run:
             logger.info("Dry run: morning brief for %s: %s", user.id, message.title)
@@ -187,6 +189,7 @@ class ScheduledPushService:
             sessions_planned=review.sessions_planned,
             next_week_km=review.next_week_km,
             change_headline=due.change_headline,
+            localize=localizer(user.language),
         )
         if dry_run:
             logger.info("Dry run: week review for %s: %s", user.id, message.title)

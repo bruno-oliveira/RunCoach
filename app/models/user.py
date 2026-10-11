@@ -37,6 +37,10 @@ class User(Base):
     # Last IANA timezone the runner's browser reported. Requests carry their
     # own zone; this is for the scheduled jobs, which have no browser to ask.
     timezone: Mapped[str | None] = mapped_column(String(64))
+    # Language the runner's browser last used ("en" / "pt"). Same reason as
+    # the timezone: an email, a push or a watch workout is written with no
+    # browser to ask. NULL means English.
+    language: Mapped[str | None] = mapped_column(String(8))
     age: Mapped[int | None] = mapped_column(Integer)
     # Optional max heart rate (BPM). When set it anchors the top of the HR
     # zones directly; otherwise we detect it from run data, then fall back to an

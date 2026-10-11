@@ -20,8 +20,8 @@ caller resolves the counts and passes them in.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Optional, Sequence
+from dataclasses import dataclass, replace
+from typing import Callable, List, Optional, Sequence
 
 # --- Thresholds --------------------------------------------------------------
 # Deliberately slack. This is the one surface that can annoy someone who isn't
@@ -176,16 +176,36 @@ def _plural(count: int, singular: str, plural: str) -> str:
     return f"{count} {singular if count == 1 else plural}"
 
 
+def _as_written(text: str) -> str:
+    return text
+
+
 def render_email(
-    nudge: OutboundNudge, *, base_url: str, unsubscribe_url: str, name: Optional[str]
+    nudge: OutboundNudge,
+    *,
+    base_url: str,
+    unsubscribe_url: str,
+    name: Optional[str],
+    localize: Callable[[str], str] = _as_written,
 ) -> tuple[str, str]:
     """``(text, html)`` for one nudge.
 
     Plain text is the real message and reads on its own; the HTML is the same
     words with a link styled as a button. Both carry the unsubscribe — an email
     the runner can't stop is not a coach, it's spam.
+
+    ``localize`` puts the copy into the runner's language. It is applied to
+    each sentence here rather than to the finished email, so the URLs and the
+    markup are never offered to a translator.
     """
-    greeting = f"Hi {name}," if name else "Hi,"
+    greeting = localize(f"Hi {name}," if name else "Hi,")
+    stop = localize("Stop these emails")
+    nudge = replace(
+        nudge,
+        headline=localize(nudge.headline),
+        body=localize(nudge.body),
+        cta_label=localize(nudge.cta_label),
+    )
     cta_url = f"{base_url.rstrip('/')}{nudge.cta_path}"
 
     text = "\n".join(
@@ -200,7 +220,7 @@ def render_email(
             "",
             "—",
             "RunCoach",
-            f"Stop these emails: {unsubscribe_url}",
+            f"{stop}: {unsubscribe_url}",
         ]
     )
 
@@ -217,7 +237,7 @@ def render_email(
         '<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0">'
         '<p style="font-size:12px;color:#6b6b6b">RunCoach &middot; '
         f'<a href="{_esc(unsubscribe_url)}" style="color:#6b6b6b">'
-        "Stop these emails</a></p>"
+        f"{_esc(stop)}</a></p>"
         "</div>"
     )
     return text, html

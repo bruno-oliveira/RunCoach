@@ -60,7 +60,9 @@ class _FakeIntervals:
         self.events = [e for e in self.events if e["id"] not in ids]
         return len(ids)
 
-    async def push_workouts(self, access_token, athlete_id, events, pre_delete=True):
+    async def push_workouts(
+        self, access_token, athlete_id, events, pre_delete=True, language=None
+    ):
         if self.boom:
             raise RuntimeError("intervals is down")
         if self.auth_boom:

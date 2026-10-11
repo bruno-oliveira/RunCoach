@@ -41,6 +41,7 @@ from app.core.time_utils import local_today, use_timezone, utcnow_naive
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings
+from app.infrastructure.i18n import localizer
 from app.models import PushSubscription, ReadinessLog, RunLog, TrainingPlan, User
 
 logger = logging.getLogger(__name__)
@@ -381,14 +382,20 @@ class OutboundNudgeService:
 
     def _send_email(self, user: User, nudge: OutboundNudge) -> bool:
         assert user.email is not None
+        # No browser is open when this is written, so the language is the one
+        # the runner's browser last reported.
+        localize = localizer(user.language)
         text, html = render_email(
             nudge,
             base_url=self.settings.public_base_url,
             unsubscribe_url=unsubscribe_url(user.id, self.settings),
             name=(user.name or "").split(" ")[0] or None,
+            localize=localize,
         )
         return self.mailer.send(
-            EmailMessage(to=user.email, subject=nudge.subject, text=text, html=html)
+            EmailMessage(
+                to=user.email, subject=localize(nudge.subject), text=text, html=html
+            )
         )
 
 

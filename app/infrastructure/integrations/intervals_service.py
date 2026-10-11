@@ -16,6 +16,7 @@ from app.contexts.runner.enrichment.derived_fields import (
 )
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.infrastructure.config import settings
+from app.infrastructure.i18n import localizer
 from app.infrastructure.integrations.activity_dedup import find_duplicate_run
 from app.models.run_log import RunLog
 from app.models.user import User
@@ -453,6 +454,7 @@ class IntervalsService:
         athlete_id: str,
         events: list[dict[str, Any]],
         pre_delete: bool = True,
+        language: str | None = None,
     ) -> list[dict[str, Any]]:
         """Create planned workouts on the athlete's calendar in one request.
 
@@ -476,6 +478,13 @@ class IntervalsService:
                 because it has already fetched the window and deleted precisely
                 what changed — repeating that here would cost a second lookup
                 per push and delete events it deliberately kept.
+            language: The runner's stored language. Only each event's ``name``
+                is translated — the title the watch shows. The description is
+                Intervals.icu's workout syntax and is sent as written. It is
+                done here, on a copy, so the caller's events (and the hashes
+                the mirror keeps of them) stay in English: a change of
+                language must not look like a change of plan and re-create a
+                fortnight of workouts on the runner's wrist.
 
         Returns:
             The created event dicts from Intervals.icu, or [] when ``events`` is
@@ -483,6 +492,13 @@ class IntervalsService:
         """
         if not events:
             return []
+        localize = localizer(language)
+        events = [
+            {**event, "name": localize(event["name"])}
+            if isinstance(event.get("name"), str)
+            else event
+            for event in events
+        ]
         dates = sorted(
             d for d in (str(e.get("start_date_local", ""))[:10] for e in events) if d
         )
@@ -509,9 +525,12 @@ class IntervalsService:
         access_token: str,
         athlete_id: str,
         event: dict[str, Any],
+        language: str | None = None,
     ) -> dict[str, Any]:
         """Create a single planned workout — see :meth:`push_workouts`."""
-        created = await self.push_workouts(access_token, athlete_id, [event])
+        created = await self.push_workouts(
+            access_token, athlete_id, [event], language=language
+        )
         return created[0] if created else {}
 
     @staticmethod

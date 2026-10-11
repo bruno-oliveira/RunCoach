@@ -31,6 +31,7 @@ from app.contexts.plan.recovery_block_service import (
     start_recovery_block,
 )
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.i18n import request_language
 from app.core.time_utils import local_today
 from app.dependencies import (
     get_current_user,
@@ -279,7 +280,7 @@ async def download_pdf(
         # ReportLab rendering is CPU-bound and synchronous; run it off the
         # event loop so a PDF render doesn't stall other concurrent requests.
         pdf_path = await run_in_threadpool(
-            pdf_generator.generate_pdf, plan_data, export_dto
+            pdf_generator.generate_pdf, plan_data, export_dto, request_language()
         )
 
         if not os.path.exists(pdf_path):
