@@ -1,8 +1,10 @@
 """Weekly plan builder.
 
 Handles distance budgeting, scaling, fill-up, and ceiling enforcement for a
-single week of training. Split into ``budget`` (leaf helpers), ``intensive_
-weekend`` (ITW reshaping), ``backyard_week`` (loop-simulation reshaping), and
+single week of training. Split into ``budget`` (leaf helpers),
+``daily_workouts`` (sizing, placing and building the day cards),
+``intensive_weekend`` (ITW reshaping), ``backyard_week`` (loop-simulation
+reshaping), ``long_run_contract`` (the road long run's final settlement), and
 ``orchestrator`` (assembly). Names are re-exported so callers import from this
 package unchanged.
 """
@@ -22,13 +24,15 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
     build_workout_for_type,
     resolve_low_budget_quality,
 )
+from app.contexts.plan.generators.weekly_plan_builder.daily_workouts import (
+    generate_daily_workouts,
+)
 from app.contexts.plan.generators.weekly_plan_builder.intensive_weekend import (
     apply_intensive_weekend,
 )
 from app.contexts.plan.generators.weekly_plan_builder.orchestrator import (
     _vertical_simulation_targets,
     build_weekly_plan,
-    generate_daily_workouts,
 )
 
 __all__ = [

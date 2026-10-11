@@ -210,7 +210,10 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   `core/training/physiology/` (VDOT, zones). `plan_generator.generate_plan`
   reads as the life of a plan: refuse (`engine_floors.py`), resolve paces /
   frequency / a reachable progression, build each week
-  (`weekly_plan_builder/`), then the plan-level passes in `plan_passes/` —
+  (`weekly_plan_builder/`: `daily_workouts` sizes, places and builds the day
+  cards, the `orchestrator` fits them to the budget, and on the road
+  `long_run_contract` settles the long run last), then the plan-level passes
+  in `plan_passes/` —
   `ramp_cap` per week as it is built, `smoothing` over the finished plan,
   `race_week` last. `plan_structure_guard.py` and
   `plan_validator.py` are the post-generation sanity checks.
