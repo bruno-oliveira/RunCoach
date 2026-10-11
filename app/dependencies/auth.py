@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.i18n import stated_request_language
 from app.core.time_utils import current_timezone_name
 from app.dependencies.database import get_db
 from app.dependencies.services import get_auth_service
@@ -67,6 +68,7 @@ async def _resolve_user(
 
     auth_service.update_user_activity(db, user)
     auth_service.remember_timezone(db, user, current_timezone_name())
+    auth_service.remember_language(db, user, stated_request_language())
     return user
 
 

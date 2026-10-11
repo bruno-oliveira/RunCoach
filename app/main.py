@@ -15,11 +15,13 @@ from app.infrastructure.health import (
     LivenessResponse,
     get_health_probe,
 )
+from app.infrastructure.i18n import CATALOGUE_DIR
 from app.infrastructure.secrets import validate_production_secrets
 from app.migrations.startup import run_startup_migrations
 from app.web.exception_handlers import register_exception_handlers
 from app.web.middleware import (
     csrf_protection,
+    request_language,
     request_size_limit,
     request_timezone,
     security_headers,
@@ -146,7 +148,16 @@ def create_app(skip_migrations: Optional[bool] = None) -> FastAPI:
     app.middleware("http")(request_size_limit)
     app.middleware("http")(security_headers)
     app.middleware("http")(request_timezone)
+    app.middleware("http")(request_language)
 
+    # Mounted ahead of /static so the phrase catalogue is served, cached and
+    # kept offline exactly like any other asset, while living in app/data
+    # where the server-side translator reads the same files.
+    app.mount(
+        "/static/i18n",
+        CachedStaticFiles(directory=str(CATALOGUE_DIR), cache_max_age=86400),
+        name="i18n",
+    )
     app.mount(
         "/static",
         CachedStaticFiles(directory="app/web/static", cache_max_age=86400),

@@ -21,6 +21,7 @@ from app.infrastructure.export.runna.sheet import (
     DayCard,
     DetailRow,
     DetailSection,
+    Labels,
     PhaseBlock,
     Profile,
     Sheet,
@@ -102,9 +103,10 @@ def _fit_lines(
 class SheetPainter:
     """Low-level drawing primitives shared by every page of the sheet."""
 
-    def __init__(self, canvas: Canvas, footer: str):
+    def __init__(self, canvas: Canvas, footer: str, labels: Labels = Labels()):
         self.canvas = canvas
         self._footer = footer
+        self._labels = labels
 
     # --- text -------------------------------------------------------------
 
@@ -191,7 +193,7 @@ class SheetPainter:
             self.text_centered(
                 x + t.COL_W / 2,
                 top + t.CARD_H / 2 + t.SIZE_REST * 0.36,
-                "Rest",
+                self._labels.rest,
                 t.FONT,
                 t.SIZE_REST,
                 t.REST_TEXT,
@@ -355,7 +357,7 @@ class SheetPainter:
         )
 
     def day_headers(self) -> None:
-        for index, name in enumerate(t.DAY_HEADERS):
+        for index, name in enumerate(self._labels.days):
             center = t.GRID_LEFT + index * t.COL_PITCH + t.COL_W / 2
             self.text_centered(
                 center,
@@ -405,7 +407,7 @@ class SheetPainter:
         self.text(
             t.MARGIN_L,
             top + 15.7,
-            "WEEK",
+            self._labels.week,
             t.FONT_BOLD,
             t.SIZE_WEEK_LABEL,
             t.FAINT,
@@ -427,7 +429,7 @@ class SheetPainter:
                 week.tag,
                 t.FONT_BOLD,
                 6.5,
-                t.ACCENT if week.tag == "(RACE)" else t.FAINT,
+                t.ACCENT if week.is_race else t.FAINT,
                 0.3,
             )
         for index, card in enumerate(week.cards):
@@ -691,7 +693,7 @@ def _flow_section(painter: SheetPainter, section: DetailSection) -> None:
 
 def render_sheet(canvas: Canvas, sheet: Sheet) -> None:
     """Paint the whole document. Leaves the canvas ready for ``save()``."""
-    painter = SheetPainter(canvas, sheet.footer)
+    painter = SheetPainter(canvas, sheet.footer, sheet.labels)
     _render_cover(painter, sheet)
     canvas.showPage()
     _render_calendar(painter, sheet.phases)

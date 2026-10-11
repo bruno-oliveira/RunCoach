@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from app.core.i18n import reset_request_language, set_request_language
 from app.core.time_utils import reset_request_timezone, set_request_timezone
 from app.infrastructure.config import settings
 
@@ -69,6 +70,21 @@ async def request_timezone(request: Request, call_next):
         return await call_next(request)
     finally:
         reset_request_timezone(token)
+
+
+async def request_language(request: Request, call_next):
+    """Bind the language the browser is showing to the request context.
+
+    ``i18n.js`` keeps the toggle in ``localStorage`` and mirrors it into the
+    ``rc_lang`` cookie, which is the only way the server hears about it. Pages
+    are translated in the browser; this is for what the server writes itself
+    for that browser (the PDF) and for remembering the choice on the user row.
+    """
+    token = set_request_language(request.cookies.get("rc_lang"))
+    try:
+        return await call_next(request)
+    finally:
+        reset_request_language(token)
 
 
 async def security_headers(request: Request, call_next):

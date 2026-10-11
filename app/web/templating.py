@@ -11,6 +11,7 @@ it — on a machine that scales to zero and pays that again on each wake.
 """
 
 import hashlib
+import json
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -21,6 +22,7 @@ from app.core.training.periodization.plan_calendar import next_monday
 from app.core.training.profiles.road_profile import race_name
 from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.config import settings
+from app.infrastructure.i18n import browser_manifest
 
 
 def _build_static_hashes(static_dir: str = "app/web/static") -> dict[str, str]:
@@ -49,10 +51,19 @@ def static_url(path: str) -> str:
     return f"/static/{path}?h={h}" if h else f"/static/{path}"
 
 
+def phrase_manifest() -> str:
+    """The phrase-catalogue URLs for ``i18n.js``, as the JSON it reads."""
+    if settings.debug:
+        # Catalogue files are edited far more often than the server restarts.
+        browser_manifest.cache_clear()
+    return json.dumps(browser_manifest(), separators=(",", ":"))
+
+
 def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     """Create a Jinja2Templates instance with common globals and filters."""
     tpl = Jinja2Templates(directory=directory)
     tpl.env.globals["static_url"] = static_url
+    tpl.env.globals["phrase_manifest"] = phrase_manifest
     # Exposed as a global (not per-route context) because the plan form is
     # rendered from several places — the home route and every validation-error
     # re-render — and each of them needs the same default start date.

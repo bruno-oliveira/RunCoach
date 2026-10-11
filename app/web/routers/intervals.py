@@ -408,6 +408,7 @@ async def intervals_push_workout(
             access_token,
             athlete_id,
             event,
+            language=current_user.language,
         )
     except IntervalsAuthorizationError as authorization_error:
         logger.warning("Intervals.icu push unauthorized for user %s", current_user.id)
@@ -484,6 +485,7 @@ async def intervals_push_week(
             access_token,
             athlete_id,
             events,
+            language=current_user.language,
         )
     except IntervalsAuthorizationError as authorization_error:
         logger.warning(

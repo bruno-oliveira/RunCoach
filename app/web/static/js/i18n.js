@@ -10,6 +10,17 @@
  * Any element with [data-i18n-html="key"]         → innerHTML replaced (use sparingly)
  *
  * Current language persisted in localStorage 'runcoach-lang'. Defaults to 'en'.
+ *
+ * Two layers. The KEYED catalogue below covers markup that carries a
+ * data-i18n attribute. Everything else — text a script builds, a workout
+ * description generated on the server, an API error — goes through the PHRASE
+ * layer further down: a catalogue keyed by the English sentence itself
+ * (app/data/i18n/<lang>/*.json), applied to every text node as it reaches the
+ * page. That is what keeps a new toast or menu from shipping in English only
+ * because nobody remembered to tag it.
+ *
+ * Opt a subtree out with data-i18n-skip (a runner's own words: a plan name, a
+ * note). The matcher mirrors app/core/i18n/phrasebook.py — change both.
  */
 
 window.RC_I18N = (function () {
@@ -1572,11 +1583,17 @@ window.RC_I18N = (function () {
     // -----------------------------------------------------------------------
 
     function t(key, lang) {
-        const locale = lang || _currentLang;
+        const locale = (typeof lang === 'string' && lang) || _currentLang;
         const catalogue = TRANSLATIONS[locale] || TRANSLATIONS[DEFAULT_LANG];
-        return catalogue[key] !== undefined ? catalogue[key]
+        const text = catalogue[key] !== undefined ? catalogue[key]
              : TRANSLATIONS[DEFAULT_LANG][key] !== undefined ? TRANSLATIONS[DEFAULT_LANG][key]
              : key;
+        // t('key', {n: 3}) fills {n} — the second argument is either a locale
+        // or the values, never both.
+        const vars = lang && typeof lang === 'object' ? lang : null;
+        if (!vars) return text;
+        return text.replace(/\{([a-z_][a-z0-9_]*)\}/g, (whole, name) =>
+            vars[name] !== undefined ? String(vars[name]) : whole);
     }
 
     function getLang() { return _currentLang; }
@@ -1585,37 +1602,44 @@ window.RC_I18N = (function () {
         if (!TRANSLATIONS[lang]) { console.warn('[i18n] Unknown locale:', lang); return; }
         _currentLang = lang;
         localStorage.setItem(STORAGE_KEY, lang);
+        _rememberOnServer(lang);
         applyTranslations();
         _updateToggleUI();
         document.documentElement.setAttribute('lang', lang === 'pt' ? 'pt' : 'en');
+        _applyPhrases();
     }
 
     function toggleLang() { setLang(_currentLang === 'en' ? 'pt' : 'en'); }
 
-    function applyTranslations() {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            el.textContent = t(el.getAttribute('data-i18n'));
+    function applyTranslations() { _applyKeys(document); }
+
+    function _applyKeys(root) {
+        const each = function (attr, apply) {
+            if (root.matches && root.matches('[' + attr + ']')) apply(root, root.getAttribute(attr));
+            root.querySelectorAll('[' + attr + ']').forEach(el => apply(el, el.getAttribute(attr)));
+        };
+        // Assign only on a real change: the observer below watches these nodes.
+        each('data-i18n', (el, key) => {
+            const text = t(key);
+            if (el.textContent !== text) el.textContent = text;
         });
-        document.querySelectorAll('[data-i18n-html]').forEach(el => {
-            el.innerHTML = t(el.getAttribute('data-i18n-html'));
+        each('data-i18n-html', (el, key) => {
+            const html = t(key);
+            if (el.innerHTML !== html) el.innerHTML = html;
         });
-        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-            el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
-        });
-        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
-            el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
-        });
-        document.querySelectorAll('[data-i18n-title]').forEach(el => {
-            el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
-        });
+        each('data-i18n-placeholder', (el, key) => { el.placeholder = t(key); });
+        each('data-i18n-aria', (el, key) => { el.setAttribute('aria-label', t(key)); });
+        each('data-i18n-title', (el, key) => { el.setAttribute('title', t(key)); });
     }
 
     function init() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved && TRANSLATIONS[saved]) _currentLang = saved;
+        _rememberOnServer(_currentLang);
         applyTranslations();
         document.documentElement.setAttribute('lang', _currentLang === 'pt' ? 'pt' : 'en');
         _updateToggleUI();
+        _applyPhrases();
     }
 
     // -----------------------------------------------------------------------
@@ -1632,5 +1656,443 @@ window.RC_I18N = (function () {
         enFlag.setAttribute('aria-pressed', isPT ? 'false' : 'true');
     }
 
-    return { t, getLang, setLang, toggleLang, applyTranslations, init };
+
+    // -----------------------------------------------------------------------
+    // Telling the server
+    // -----------------------------------------------------------------------
+    // The toggle lives in localStorage, which the server never sees, so it is
+    // mirrored into a cookie. That covers what the server writes for this
+    // browser (the PDF), and it is how a signed-in runner's choice reaches
+    // their user row — an email, a push or a watch workout is written with no
+    // browser around to ask.
+    function _rememberOnServer(lang) {
+        document.cookie = 'rc_lang=' + lang + '; path=/; max-age=31536000; SameSite=Lax';
+    }
+
+    // -----------------------------------------------------------------------
+    // Phrase layer — the matcher (mirror of app/core/i18n/phrasebook.py)
+    // -----------------------------------------------------------------------
+    const PLACEHOLDER = /\{([a-z_][a-z0-9_]*)(:n|!)?\}/g;
+    const NUMBER = '[-+−]?[0-9][0-9.,:]*';
+    // What {name} may capture: anything inside one sentence and one side of
+    // an "a · b" line, so a trailing placeholder cannot swallow what follows.
+    const TEXT = '(?:(?![.!?…]["”\')]?\\s| · )[\\s\\S])+?';
+    const NUMBER_ONLY = new RegExp('^' + NUMBER + '$');
+    const LEAD = /^[^\p{L}\p{N}_(\[{"'“‘«]+/u;
+    const TRAIL = /[\s:…→←↑↓›»▾▸*]+$/;
+    const FIRST_WORD = /^[\p{L}\p{N}_]+/u;
+    const DOT_SEPARATOR = /( · )/;
+    const SENTENCE_END = /([.!?…]+["”')]?\s+)/;
+
+    function _escapeRegex(text) { return text.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&'); }
+    function _normalize(text) { return text.replace(/\s+/g, ' ').trim(); }
+
+    function _compilePattern(source) {
+        const names = [], required = [];
+        let regex = '', literal = 0, position = 0, match;
+        PLACEHOLDER.lastIndex = 0;
+        while ((match = PLACEHOLDER.exec(source)) !== null) {
+            const text = source.slice(position, match.index);
+            literal += text.length;
+            regex += _escapeRegex(text);
+            if (names.indexOf(match[1]) !== -1) {
+                regex += '\\k<' + match[1] + '>';
+            } else {
+                names.push(match[1]);
+                if (match[2] === '!') required.push(match[1]);
+                regex += '(?<' + match[1] + '>' + (match[2] === ':n' ? NUMBER : TEXT) + ')';
+            }
+            position = match.index + match[0].length;
+        }
+        const tail = source.slice(position);
+        literal += tail.length;
+        return { regex: new RegExp('^' + regex + _escapeRegex(tail) + '$'),
+                 names: names, required: required, literal: literal };
+    }
+
+    function _buildBook(entries) {
+        const book = { exact: new Map(), exactAnyCase: new Map(), byHead: new Map(),
+                       byHeadAnyCase: new Map(), anywhere: [], cache: new Map() };
+        const patterns = [];
+        Object.keys(entries).forEach(function (raw) {
+            const source = _normalize(raw);
+            PLACEHOLDER.lastIndex = 0;
+            if (!PLACEHOLDER.test(source)) {
+                book.exact.set(source, entries[raw]);
+                const folded = source.toLowerCase();
+                if (!book.exactAnyCase.has(folded)) book.exactAnyCase.set(folded, entries[raw]);
+                return;
+            }
+            let compiled;
+            try { compiled = _compilePattern(source); } catch (e) { return; }
+            const head = source.match(FIRST_WORD);
+            compiled.head = head ? head[0] : null;
+            compiled.target = entries[raw];
+            patterns.push(compiled);
+        });
+        // Most literal text first: the specific pattern beats the general one.
+        patterns.sort(function (a, b) { return b.literal - a.literal; });
+        patterns.forEach(function (p) {
+            if (p.head === null) { book.anywhere.push(p); return; }
+            if (!book.byHead.has(p.head)) book.byHead.set(p.head, []);
+            book.byHead.get(p.head).push(p);
+            const folded = p.head.toLowerCase();
+            if (!book.byHeadAnyCase.has(folded)) book.byHeadAnyCase.set(folded, []);
+            book.byHeadAnyCase.get(folded).push(p);
+        });
+        return book;
+    }
+
+    function _pairs(tokens) {
+        const pairs = [];
+        for (let i = 0; i < tokens.length; i += 2) {
+            const separator = i + 1 < tokens.length ? tokens[i + 1] : '';
+            if (tokens[i] || separator) pairs.push([tokens[i], separator]);
+        }
+        return pairs;
+    }
+    function _splitOnDots(text) { return _pairs(text.split(DOT_SEPARATOR)); }
+    function _splitSentences(text) {
+        return _pairs(text.split(SENTENCE_END)).map(function (pair) {
+            const closing = pair[1].replace(/\s+$/, '');
+            return [pair[0] + closing, pair[1].slice(closing.length)];
+        });
+    }
+
+    function _match(book, text, anyCase) {
+        const exact = anyCase ? book.exactAnyCase.get(text.toLowerCase()) : book.exact.get(text);
+        if (exact !== undefined) return exact;
+        const head = text.match(FIRST_WORD);
+        const candidates = (head && (anyCase
+            ? book.byHeadAnyCase.get(head[0].toLowerCase())
+            : book.byHead.get(head[0]))) || [];
+        const all = candidates.concat(book.anywhere);
+        for (let i = 0; i < all.length; i++) {
+            let regex = all[i].regex;
+            if (anyCase) {
+                // The same pattern, case-insensitive — compiled on first need.
+                regex = all[i].anyCase || (all[i].anyCase = new RegExp(regex.source, 'i'));
+            }
+            const found = regex.exec(text);
+            if (!found) continue;
+            const groups = found.groups || {};
+            const values = {};
+            let usable = true;
+            for (let n = 0; n < all[i].names.length && usable; n++) {
+                const name = all[i].names[n], captured = groups[name];
+                const must = all[i].required.indexOf(name) !== -1;
+                if (!must && NUMBER_ONLY.test(captured)) { values[name] = captured; continue; }
+                const inner = _unit(book, captured);
+                if (inner === null && must) usable = false;
+                values[name] = inner === null ? captured : inner;
+            }
+            // A {name!} capture the catalogue cannot translate: not this pattern.
+            if (!usable) continue;
+            return all[i].target.replace(PLACEHOLDER, function (whole, name) {
+                return values[name] === undefined ? whole : values[name];
+            });
+        }
+        return null;
+    }
+
+    function _unit(book, text) {
+        let found = _cased(book, text);
+        if (found !== null) return found;
+        const lead = text.match(LEAD);
+        let start = lead ? lead[0].length : 0;
+        const trail = text.slice(start).match(TRAIL);
+        let end = trail ? text.length - trail[0].length : text.length;
+        if (text.charAt(0) === '(' && text.charAt(text.length - 1) === ')') {
+            start = 1; end = text.length - 1;
+        }
+        if ((start === 0 && end === text.length) || start >= end) return null;
+        found = _cased(book, text.slice(start, end));
+        return found === null ? null : text.slice(0, start) + found + text.slice(end);
+    }
+
+    /** Match text as written, or as a known phrase in another case. */
+    function _cased(book, text) {
+        let found = _match(book, text);
+        if (found !== null) return found;
+        const first = text.charAt(0), second = text.charAt(1);
+        const firstUpper = first !== first.toLowerCase();
+        if (firstUpper && second && second !== second.toLowerCase()) {
+            found = _inCapitals(book, text);
+        } else if (firstUpper) {
+            // "Your legs are heavy" is the entry "your legs are heavy" opening
+            // a sentence.
+            found = _match(book, first.toLowerCase() + text.slice(1));
+            if (found !== null) found = found.charAt(0).toUpperCase() + found.slice(1);
+        }
+        // Failing that, case is ignored altogether: the watch titles its
+        // workouts "400S Into 200S".
+        return found === null ? _match(book, text, true) : found;
+    }
+
+    // "RACE DAY" is "Race day" (or "Race Day") set in capitals. Only for text
+    // that is capitals throughout: a lone acronym (VDOT) has no ordinary
+    // spelling to find, and falls through untouched.
+    function _inCapitals(book, text) {
+        if (text !== text.toUpperCase() || text === text.toLowerCase()) return null;
+        const lowered = text.toLowerCase();
+        const spellings = [
+            lowered.charAt(0).toUpperCase() + lowered.slice(1),
+            lowered.split(' ').map(function (word) {
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' '),
+            lowered
+        ];
+        for (let i = 0; i < spellings.length; i++) {
+            const found = _match(book, spellings[i]);
+            if (found !== null) return found.toUpperCase();
+        }
+        return null;
+    }
+
+    function _chunk(book, text) {
+        const found = _unit(book, text);
+        if (found !== null) return found;
+        const splitters = [_splitOnDots, _splitSentences];
+        for (let s = 0; s < splitters.length; s++) {
+            const parts = splitters[s](text);
+            if (parts.length < 2) continue;
+            let out = '', hit = false;
+            for (let i = 0; i < parts.length; i++) {
+                const translated = _chunk(book, parts[i][0]);
+                hit = hit || translated !== null;
+                out += (translated === null ? parts[i][0] : translated) + parts[i][1];
+            }
+            if (hit) return out;
+        }
+        return null;
+    }
+
+    /** Translate with a book; null when no part of the text is known. */
+    function _lookup(book, text) {
+        if (!text) return null;
+        const body = text.trim();
+        if (!body) return null;
+        const key = _normalize(body);
+        let found = book.cache.get(key);
+        if (found === undefined) {
+            found = _chunk(book, key);
+            if (book.cache.size > 20000) book.cache.clear();
+            book.cache.set(key, found);
+        }
+        if (found === null) return null;
+        const start = text.indexOf(body);
+        return text.slice(0, start) + found + text.slice(start + body.length);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phrase layer — loading the catalogue
+    // -----------------------------------------------------------------------
+    // base.html lists the catalogue files in <meta name="rc-i18n-phrases">:
+    // {"pt": {"core": [url, …], "recipes": [url]}}. "core" loads on every
+    // page; the others only where an element asks (data-i18n-bundle).
+    const _entries = {};      // lang -> merged {english: translation}
+    const _books = {};        // lang -> compiled book
+    const _bundles = {};      // "lang/bundle" -> Promise
+    const _missing = new Set();
+
+    function _manifest() {
+        const meta = document.querySelector('meta[name="rc-i18n-phrases"]');
+        if (!meta) return {};
+        try { return JSON.parse(meta.getAttribute('content')) || {}; } catch (e) { return {}; }
+    }
+
+    function loadBundle(name, lang) {
+        const locale = lang || _currentLang;
+        const id = locale + '/' + name;
+        if (_bundles[id]) return _bundles[id];
+        const urls = ((_manifest()[locale] || {})[name]) || [];
+        _bundles[id] = Promise.all(urls.map(function (url) {
+            return fetch(url, { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : {}; })
+                .catch(function () { return {}; });
+        })).then(function (files) {
+            if (!files.length) return;
+            const merged = _entries[locale] || (_entries[locale] = {});
+            files.forEach(function (file) { Object.assign(merged, file); });
+            _books[locale] = _buildBook(merged);
+            if (locale === _currentLang) {
+                _translateTree(document.documentElement);
+                _redrawCanvases();
+            }
+        });
+        return _bundles[id];
+    }
+
+    function _wantedBundles() {
+        const names = ['core'];
+        document.querySelectorAll('[data-i18n-bundle]').forEach(function (el) {
+            el.getAttribute('data-i18n-bundle').split(/\s+/).forEach(function (name) {
+                if (name && names.indexOf(name) === -1) names.push(name);
+            });
+        });
+        return names;
+    }
+
+    // -----------------------------------------------------------------------
+    // Phrase layer — applying it to the page
+    // -----------------------------------------------------------------------
+    const SKIP = 'script,style,noscript,code,pre,textarea,[data-i18n],[data-i18n-html],' +
+                 '[data-i18n-skip],[translate="no"],[contenteditable="true"]';
+    const ATTRS = {
+        title: 'data-i18n-title', placeholder: 'data-i18n-placeholder',
+        alt: 'data-i18n-alt', ['aria-label']: 'data-i18n-aria'
+    };
+    const _textState = new WeakMap();   // text node -> {src, out}
+    const _attrState = new WeakMap();   // element   -> {attr: {src, out}}
+    let _observer = null;
+    let _titleState = null;
+
+    function _render(source) {
+        const book = _currentLang === DEFAULT_LANG ? null : _books[_currentLang];
+        if (!book) return source;
+        const found = _lookup(book, source);
+        if (found !== null) return found;
+        if (/[A-Za-z]{3}/.test(source)) _missing.add(_normalize(source));
+        return source;
+    }
+
+    function _translateText(node) {
+        const current = node.nodeValue;
+        if (!current || !/\S/.test(current)) return;
+        const parent = node.parentElement;
+        if (!parent || parent.closest(SKIP)) return;
+        const state = _textState.get(node);
+        // The page may have rewritten the node since we last touched it; what
+        // is there now is then the new English source.
+        const source = state && state.out === current ? state.src : current;
+        const out = _render(source);
+        _textState.set(node, { src: source, out: out });
+        if (out !== current) node.nodeValue = out;
+    }
+
+    function _translateAttrs(el) {
+        if (!el.hasAttribute) return;
+        let state = _attrState.get(el);
+        Object.keys(ATTRS).forEach(function (attr) {
+            if (!el.hasAttribute(attr) || el.hasAttribute(ATTRS[attr])) return;
+            if (el.closest('[data-i18n-skip],[translate="no"]')) return;
+            const current = el.getAttribute(attr);
+            if (!current || !/\S/.test(current)) return;
+            if (!state) { state = {}; _attrState.set(el, state); }
+            const known = state[attr];
+            const source = known && known.out === current ? known.src : current;
+            const out = _render(source);
+            state[attr] = { src: source, out: out };
+            if (out !== current) el.setAttribute(attr, out);
+        });
+    }
+
+    function _translateTree(root) {
+        if (!root) return;
+        if (root.nodeType === Node.TEXT_NODE) { _translateText(root); return; }
+        if (root.nodeType !== Node.ELEMENT_NODE) return;
+        _translateAttrs(root);
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === Node.TEXT_NODE) _translateText(node);
+            else _translateAttrs(node);
+        }
+        if (root === document.documentElement) _translateTitle();
+    }
+
+    function _translateTitle() {
+        const current = document.title;
+        const source = _titleState && _titleState.out === current ? _titleState.src : current;
+        const out = _render(source);
+        _titleState = { src: source, out: out };
+        if (out !== current) document.title = out;
+    }
+
+    function _observe() {
+        if (_observer || typeof MutationObserver === 'undefined') return;
+        _observer = new MutationObserver(function (records) {
+            records.forEach(function (record) {
+                if (record.type === 'characterData') { _translateText(record.target); return; }
+                if (record.type === 'attributes') { _translateAttrs(record.target); return; }
+                record.addedNodes.forEach(function (added) {
+                    // A script that injects markup carrying data-i18n keys
+                    // gets those filled too, not just its bare text.
+                    if (added.nodeType === Node.ELEMENT_NODE) _applyKeys(added);
+                    _translateTree(added);
+                });
+            });
+        });
+        _observer.observe(document.documentElement, {
+            childList: true, subtree: true, characterData: true,
+            attributes: true, attributeFilter: Object.keys(ATTRS)
+        });
+    }
+
+    // Text painted on a canvas (the charts, the share card) never becomes a
+    // node, so the walker cannot reach it. It all goes through three context
+    // methods, which is a narrower door than every call site that draws.
+    function _patchCanvas() {
+        const proto = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
+        if (!proto || proto.rcPhrased) return;
+        ['fillText', 'strokeText', 'measureText'].forEach(function (name) {
+            const original = proto[name];
+            proto[name] = function (text) {
+                const args = Array.prototype.slice.call(arguments);
+                if (typeof text === 'string') args[0] = phrase(text);
+                return original.apply(this, args);
+            };
+        });
+        proto.rcPhrased = true;
+    }
+
+    // A canvas keeps the pixels it was given: redraw what was painted before
+    // the catalogue arrived or the language changed.
+    function _redrawCanvases() {
+        const charts = window.Chart && window.Chart.instances;
+        if (charts) {
+            Object.keys(charts).forEach(function (id) {
+                try { charts[id].update('none'); } catch (e) { /* a destroyed chart */ }
+            });
+        }
+        document.dispatchEvent(new CustomEvent('rc:langchange', { detail: { lang: _currentLang } }));
+    }
+
+    function _applyPhrases() {
+        _patchCanvas();
+        _observe();
+        // English needs no catalogue, only the originals put back.
+        _translateTree(document.documentElement);
+        _redrawCanvases();
+        if (_currentLang === DEFAULT_LANG) return;
+        _wantedBundles().forEach(function (name) { loadBundle(name); });
+    }
+
+    /**
+     * Translate one English string — for text that never becomes a DOM node
+     * (a canvas label, a native prompt, a document title).
+     */
+    function phrase(text) {
+        const book = _currentLang === DEFAULT_LANG ? null : _books[_currentLang];
+        if (!book || text == null) return text;
+        const found = _lookup(book, String(text));
+        if (found === null && /[A-Za-z]{3}/.test(text)) _missing.add(_normalize(String(text)));
+        return found === null ? text : found;
+    }
+
+    /** English text seen on this page with no translation (for verification). */
+    function missing() { return Array.from(_missing).sort(); }
+
+    /** Resolves once the current language's catalogue is loaded and applied. */
+    function ready() {
+        if (_currentLang === DEFAULT_LANG) return Promise.resolve();
+        return Promise.all(_wantedBundles().map(function (name) { return loadBundle(name); }));
+    }
+
+    return {
+        t, getLang, setLang, toggleLang, applyTranslations, init,
+        phrase, loadBundle, ready, missing,
+        // The bare matcher, so tests can hold it to the Python one's cases.
+        _matcher: { build: _buildBook, lookup: _lookup }
+    };
 })();

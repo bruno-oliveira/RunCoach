@@ -275,3 +275,16 @@ class AuthService:
             return
         user.timezone = tz_name
         db.commit()
+
+    def remember_language(
+        self, db: Session, user: User, language: Optional[str]
+    ) -> None:
+        """Store the browser's language so text written without it can match.
+
+        ``language`` is what the request *named* (``None`` when it named
+        nothing), so a request with no cookie leaves the stored value alone.
+        """
+        if not language or user.language == language:
+            return
+        user.language = language
+        db.commit()

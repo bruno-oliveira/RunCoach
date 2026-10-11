@@ -9,8 +9,8 @@ dumb painter of an already-decided layout.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from dataclasses import dataclass, fields, is_dataclass, replace
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.workouts.workout_steps.presentation import session_view
@@ -52,11 +52,17 @@ class StepLine:
 REST_CARD = DayCard(kind="rest")
 
 
+RACE_TAG = "(RACE)"
+
+
 @dataclass(frozen=True)
 class WeekRow:
     number: int
     cards: Tuple[DayCard, ...]
     tag: str = ""  # "DELOAD", "(RACE)" — sits under the week number
+    # Whether ``tag`` marks race week. Carried as a flag because the tag is
+    # copy, and copy is translated before the painter sees it.
+    is_race: bool = False
 
 
 @dataclass(frozen=True)
@@ -103,11 +109,51 @@ class DetailSection:
 
 
 @dataclass(frozen=True)
+class Labels:
+    """The few words the painter draws that belong to no card or section."""
+
+    week: str = "WEEK"
+    rest: str = "Rest"
+    days: Tuple[str, ...] = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+
+
+@dataclass(frozen=True)
 class Sheet:
     cover: Cover
     phases: Tuple[PhaseBlock, ...]
     sections: Tuple[DetailSection, ...]
     footer: str
+    labels: Labels = Labels()
+
+
+def localize_sheet(sheet: Sheet, translate: Callable[[str], str]) -> Sheet:
+    """Return ``sheet`` with every piece of copy passed through ``translate``.
+
+    Done on the model, before any drawing, because the painter wraps and
+    measures text line by line — by then a sentence is fragments, and a
+    fragment matches nothing in the catalogue. ``kind`` is left alone
+    everywhere: it is a key into the theme's colours, not something to read.
+    """
+    localized = _localize(sheet, translate)
+    assert isinstance(localized, Sheet)
+    return localized
+
+
+def _localize(value: Any, translate: Callable[[str], str]) -> Any:
+    if isinstance(value, str):
+        return translate(value)
+    if isinstance(value, tuple):
+        return tuple(_localize(item, translate) for item in value)
+    if is_dataclass(value) and not isinstance(value, type):
+        return replace(
+            value,
+            **{
+                f.name: _localize(getattr(value, f.name), translate)
+                for f in fields(value)
+                if f.name != "kind"
+            },
+        )
+    return value
 
 
 # --- Vocabulary -----------------------------------------------------------
@@ -415,7 +461,7 @@ def _has_race(week: Dict[str, Any]) -> bool:
 
 def _week_row(week: Dict[str, Any]) -> WeekRow:
     if _has_race(week):
-        tag = "(RACE)"
+        tag = RACE_TAG
     elif week.get("is_recovery") and _phase_label(week) != _RECOVERY_PLAN_TYPE:
         # In a race plan ``is_recovery`` marks the deload weeks. Every week of
         # the block that follows a race is *phase* "recovery" and sets the same
@@ -425,7 +471,12 @@ def _week_row(week: Dict[str, Any]) -> WeekRow:
         tag = "DELOAD"
     else:
         tag = ""
-    return WeekRow(number=int(week.get("week") or 0), cards=_week_cards(week), tag=tag)
+    return WeekRow(
+        number=int(week.get("week") or 0),
+        cards=_week_cards(week),
+        tag=tag,
+        is_race=tag == RACE_TAG,
+    )
 
 
 def _build_phases(plan_data: Sequence[Dict[str, Any]]) -> Tuple[PhaseBlock, ...]:

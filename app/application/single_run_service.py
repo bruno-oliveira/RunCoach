@@ -340,7 +340,9 @@ async def send_to_watch(
         # push_workout removes any earlier event with this external_id first:
         # Intervals only re-triggers the watch export on create, so a re-send
         # has to be a delete and a create.
-        created = await intervals_service.push_workout(access_token, athlete_id, event)
+        created = await intervals_service.push_workout(
+            access_token, athlete_id, event, language=user.language
+        )
     except IntervalsAuthorizationError:
         logger.warning("Single run push unauthorized for user %s", user.id)
         return WATCH_AUTH

@@ -427,6 +427,42 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   Tips-page fuel idea names its `recipe`, and its carb label is read from it.
   Favourites store a snapshot but are served from the live catalogue.
 
+- **Translation (English / Portuguese)** — two layers, and the second is the
+  one that matters. Markup with a `data-i18n` key is swapped from the keyed
+  catalogue inside `static/js/i18n.js`. **Everything else** — a toast built in
+  a script, a chart label, a workout description assembled in `core/training`
+  and stored in `plan_data`, an API error, a recipe — is translated by its
+  *English text*, gettext style, from `app/data/i18n/pt/*.json`. That is
+  deliberate: plan prose is generated with the numbers baked in and persisted,
+  so threading a language through the training science could never reach a
+  plan already saved, and tagging each call site is how text kept shipping in
+  English. An entry is an exact sentence or a pattern (`{name}` any text within
+  one sentence, `{name:n}` a number, `{name!}` only text the catalogue itself
+  translates); text that matches nothing whole is tried per ` · ` part and per
+  sentence, then by case (sentence-initial, ALL CAPS, any).
+  `core/i18n/phrasebook.py` and `i18n.js` implement the **same matcher** —
+  change both; `tests/test_core/phrase_cases.json` is run through each. The
+  browser applies it to every text node as it appears (a `MutationObserver`,
+  plus the canvas text methods for charts and the share card); opt a runner's
+  own words out with `data-i18n-skip`. The server applies it where no page
+  exists: `PushNotifier.notify` (every push), `render_email`, the PDF
+  (`localize_sheet` — on the layout model, *before* text is wrapped into
+  fragments; `kind` fields are colour keys and are skipped) and
+  `IntervalsService.push_workouts` (the event **name only**: the description is
+  Intervals.icu's workout syntax, and the mirror's hashes stay English so a
+  language switch is not mistaken for a plan change). The language travels as
+  the `rc_lang` cookie → `request_language` middleware → `users.language`
+  (`remember_language`, same path as the timezone) for the jobs with no browser.
+  Files map to bundles in `infrastructure/i18n`: `recipes.json` loads only where
+  an element carries `data-i18n-bundle="recipes"`; `outbound.json` and
+  `pdf.json` never reach the browser.
+  `tests/test_architecture/test_phrase_catalogue.py` fails the build on
+  untranslated template text, script strings, recipes and generated plan
+  content — add the sentence to a catalogue file, or to the allow-list beside
+  the scan if it is not copy. Not covered, on purpose: `sw.js`'s offline page
+  (a worker cannot read the language), the admin console, and recipe *search*,
+  which still matches the English names.
+
 - **Workout typing** — the user-entered/imported `workout_type` is kept separate
   from `inferred_workout_type` (+ `inferred_type_confidence`), filled in from
   pace/HR/distance/splits by `contexts/runner/fitness/workout_type_classifier.py`.

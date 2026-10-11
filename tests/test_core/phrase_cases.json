@@ -1,0 +1,231 @@
+{
+  "entries": {
+    "Rest day": "Dia de descanso",
+    "Week {n:n}": "Semana {n}",
+    "Week {n:n} of {total:n}": "Semana {n} de {total}",
+    "{level} Plan": "Plano {level}",
+    "Intermediate": "Intermédio",
+    "Easy run": "Corrida fácil",
+    "Run easy for {n:n} km.": "Corra fácil durante {n} km.",
+    "Keep it relaxed.": "Mantenha-se descontraído.",
+    "Save": "Guardar",
+    "adjusted": "ajustado",
+    "{a:n} × {b:n} m strides": "{a} × acelerações de {b} m",
+    "Missed: {days}.": "Falhou: {days}.",
+    "{a:n} min at {effort}": "{a} min em {effort}",
+    "threshold effort": "esforço de limiar",
+    "Can't save (try again)": "Não foi possível guardar (tente de novo)",
+    "{x} and {x}": "{x} e {x}",
+    "your legs are heavy": "tem as pernas pesadas",
+    "your sleep was broken": "dormiu mal",
+    "{a!} and {b!}.": "{a} e {b}.",
+    "{a!}, {b!} and {c!}.": "{a}, {b} e {c}.",
+    "VDOT": "VDOT",
+    "Race day": "Dia da prova",
+    "Long Run": "Corrida longa",
+    "Mon": "Seg",
+    "Weeks {a}–{b}": "Semanas {a}–{b}",
+    "Aimed at your {race}.": "Apontado a {race}.",
+    "easy running": "corrida fácil",
+    "{a:n}s into {b:n}s": "{a}s seguidos de {b}s",
+    "VO2max {a:n}m Repeats": "Repetições de {a} m a VO2max"
+  },
+  "cases": [
+    [
+      "Rest day",
+      "Dia de descanso"
+    ],
+    [
+      "  Rest day\n",
+      "  Dia de descanso\n"
+    ],
+    [
+      "Rest   day",
+      "Dia de descanso"
+    ],
+    [
+      "Week 3",
+      "Semana 3"
+    ],
+    [
+      "Week 3 of 12",
+      "Semana 3 de 12"
+    ],
+    [
+      "Week Review",
+      null
+    ],
+    [
+      "Intermediate Plan",
+      "Plano Intermédio"
+    ],
+    [
+      "Unknown Plan",
+      "Plano Unknown"
+    ],
+    [
+      "Easy run · Week 4",
+      "Corrida fácil · Semana 4"
+    ],
+    [
+      "Easy run · 5.2 km",
+      "Corrida fácil · 5.2 km"
+    ],
+    [
+      "Run easy for 18.5 km. Keep it relaxed.",
+      "Corra fácil durante 18.5 km. Mantenha-se descontraído."
+    ],
+    [
+      "Run easy for 5 km. Then something new.",
+      "Corra fácil durante 5 km. Then something new."
+    ],
+    [
+      "✓ Save",
+      "✓ Guardar"
+    ],
+    [
+      "Save:",
+      "Guardar:"
+    ],
+    [
+      "Save…",
+      "Guardar…"
+    ],
+    [
+      "(adjusted)",
+      "(ajustado)"
+    ],
+    [
+      "6 × 95 m strides",
+      "6 × acelerações de 95 m"
+    ],
+    [
+      "Missed: Mon, Wed.",
+      "Falhou: Mon, Wed."
+    ],
+    [
+      "20 min at threshold effort",
+      "20 min em esforço de limiar"
+    ],
+    [
+      "Can't save (try again)",
+      "Não foi possível guardar (tente de novo)"
+    ],
+    [
+      "this and this",
+      "this e this"
+    ],
+    [
+      "this and that",
+      null
+    ],
+    [
+      "Unknown thing",
+      null
+    ],
+    [
+      "5:30",
+      null
+    ],
+    [
+      "",
+      null
+    ],
+    [
+      "   ",
+      null
+    ],
+    [
+      "your legs are heavy",
+      "tem as pernas pesadas"
+    ],
+    [
+      "Your legs are heavy",
+      "Tem as pernas pesadas"
+    ],
+    [
+      "Your sleep was broken and your legs are heavy.",
+      "Dormiu mal e tem as pernas pesadas."
+    ],
+    [
+      "Run easy and keep going.",
+      null
+    ],
+    [
+      "Easy run",
+      "Corrida fácil"
+    ],
+    [
+      "SAVE",
+      "GUARDAR"
+    ],
+    [
+      "RACE DAY",
+      "DIA DA PROVA"
+    ],
+    [
+      "LONG RUN",
+      "CORRIDA LONGA"
+    ],
+    [
+      "MON",
+      "SEG"
+    ],
+    [
+      "(REST DAY)",
+      "(DIA DE DESCANSO)"
+    ],
+    [
+      "WEEK 3",
+      "SEMANA 3"
+    ],
+    [
+      "VDOT",
+      "VDOT"
+    ],
+    [
+      "NASA",
+      null
+    ],
+    [
+      "Weeks 1–4 · easy running",
+      "Semanas 1–4 · corrida fácil"
+    ],
+    [
+      "Aimed at your 10K. Keep it relaxed.",
+      "Apontado a 10K. Mantenha-se descontraído."
+    ],
+    [
+      "Aimed at your 36.3 km race.",
+      "Apontado a 36.3 km race."
+    ],
+    [
+      "Unknown Plan",
+      "Plano Unknown"
+    ],
+    [
+      "Rest Day",
+      "Dia de descanso"
+    ],
+    [
+      "400S Into 200S",
+      "400s seguidos de 200s"
+    ],
+    [
+      "Vo2Max 400M Repeats",
+      "Repetições de 400 m a VO2max"
+    ],
+    [
+      "Easy Run",
+      "Corrida fácil"
+    ],
+    [
+      "Week Review",
+      null
+    ],
+    [
+      "easy run",
+      "Corrida fácil"
+    ]
+  ]
+}

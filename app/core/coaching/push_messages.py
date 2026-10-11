@@ -14,7 +14,7 @@ No I/O, no ORM. The application layer resolves the facts and hands them in.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 from app.domain.notifications import PushMessage
 
@@ -49,6 +49,15 @@ def fmt_km(km: float) -> str:
     return f"{int(rounded)} km" if rounded == int(rounded) else f"{rounded} km"
 
 
+# Translating has to happen before clipping: a sentence cut off at "…" no
+# longer matches the catalogue, so it would go out half in English.
+Localize = Callable[[str], str]
+
+
+def _as_written(text: str) -> str:
+    return text
+
+
 def _clip(text: str, limit: int = _BODY_LIMIT) -> str:
     text = " ".join(text.split())
     if len(text) <= limit:
@@ -63,6 +72,7 @@ def after_sync_message(
     plan_id: Optional[str],
     adaptation_headline: Optional[str] = None,
     extra_runs: int = 0,
+    localize: Localize = _as_written,
 ) -> PushMessage:
     """The note after a sync: the run, and the plan change if there was one."""
     title = f"{fmt_km(run.distance_km)} logged"
@@ -82,7 +92,9 @@ def after_sync_message(
 
     url = f"/plan/{plan_id}#today-card" if plan_id else "/coach"
     tag = f"plan-{plan_id}" if plan_id else "run"
-    return PushMessage(title=title, body=_clip(body), url=url, tag=tag)
+    return PushMessage(
+        title=localize(title), body=_clip(localize(body)), url=url, tag=tag
+    )
 
 
 def morning_brief_message(
@@ -93,6 +105,7 @@ def morning_brief_message(
     readiness_label: Optional[str],
     drivers: Sequence[str] = (),
     advisory: Optional[str] = None,
+    localize: Localize = _as_written,
 ) -> PushMessage:
     """Today's session, and whether the body agrees with the plan."""
     title = f"Today: {session_title}"
@@ -111,8 +124,8 @@ def morning_brief_message(
     else:
         body = "Check in to tell the plan how you feel."
     return PushMessage(
-        title=title,
-        body=_clip(body),
+        title=localize(title),
+        body=_clip(localize(body)),
         url=f"/plan/{plan_id}#today-card",
         tag=f"today-{plan_id}",
     )
@@ -128,6 +141,7 @@ def week_review_message(
     sessions_planned: int,
     next_week_km: Optional[float] = None,
     change_headline: Optional[str] = None,
+    localize: Localize = _as_written,
 ) -> PushMessage:
     """Sunday evening: how the week went against the plan, and what's next."""
     title = f"Week {week_number}: {fmt_km(done_km)} of {fmt_km(planned_km)}"
@@ -137,8 +151,8 @@ def week_review_message(
     elif next_week_km is not None:
         parts.append(f"Next week: {fmt_km(next_week_km)}.")
     return PushMessage(
-        title=title,
-        body=_clip(" ".join(parts)),
+        title=localize(title),
+        body=_clip(localize(" ".join(parts))),
         url=f"/plan/{plan_id}#week-review",
         tag=f"review-{plan_id}",
     )
