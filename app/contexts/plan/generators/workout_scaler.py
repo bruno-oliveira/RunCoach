@@ -39,6 +39,7 @@ from app.core.training.periodization.training_constants import get_hard_ceiling
 from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_CAP_KM
 from app.core.training.workouts import workout_builders
 from app.core.training.workouts.key_workout_library import rebuild_key_workout
+from app.core.training.workouts.long_run_shapes import reshape_long_card
 
 
 def long_run_pace_min_km(pace_zones: Optional[Dict]) -> Optional[float]:
@@ -200,8 +201,14 @@ def rebuild_long_run(
     fragments) and the matching step list. Calling it with the new distance
     keeps description ↔ steps ↔ distance aligned. Caller-attached fields
     (``coaching_rationale``, ``strength_session``, …) are preserved.
+
+    A runner-chosen shape (``long_shape``, custom plans) is re-laid at the new
+    distance instead, so a resize never turns a negative split back into a
+    plain long run.
     """
     rounded = round(new_distance, 1)
+    if reshape_long_card(workout, rounded, pace_zones):
+        return
     rebuilt = workout_builders.generate_long_run(
         workout.get("day", 0),
         rounded,
@@ -702,6 +709,8 @@ def _resize_long_run(
         for key in [k for k in workout if k.startswith("key_workout")]:
             workout.pop(key, None)
         workout.pop("fixed_structure", None)
+    # A shaped long run is not pinned (it carries no key_workout_id), so the
+    # cap already takes effect through it; rebuild_long_run re-lays the shape.
     rebuild_long_run(workout, distance, pace_zones)
 
 

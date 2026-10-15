@@ -533,4 +533,172 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
+    # ── Flat to Mountain: Session A — climbing strength (heavy & slow) ────
+    # Custom plans only (template "climb_descent"). Elevation is a strength
+    # stimulus: when the terrain will not load the legs, these do.
+    "climb": {
+        "beginner": {
+            "base_duration": "25-30 min",
+            "warm_up": [
+                "5 min easy walk",
+                "Leg swings — 10 each side",
+                "Bodyweight squats — 10 reps",
+            ],
+            "exercises": [
+                {"name": "Backpack Squat (3s lowering)", "sets": 3, "reps": "8"},
+                {"name": "Walking Lunge", "sets": 3, "reps": "10 each side"},
+                {"name": "Step-ups", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Single-leg Deadlift (bodyweight)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {"name": "Calf Raises (straight & bent knee)", "sets": 3, "reps": "15"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Calf stretch — 30 sec each",
+                "Pigeon pose — 45 sec each side",
+            ],
+        },
+        "intermediate": {
+            "base_duration": "30-40 min",
+            "warm_up": [
+                "5 min easy walk or light jog",
+                "Leg swings — 10 each side",
+                "Hip circles — 10 each direction",
+            ],
+            "exercises": [
+                {"name": "Goblet Squat (3s lowering)", "sets": 3, "reps": "6-8"},
+                {"name": "Walking Lunge", "sets": 3, "reps": "10 each side"},
+                {"name": "Weighted Step-ups", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Single-leg Romanian Deadlift",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {"name": "Calf Raises (straight & bent knee)", "sets": 3, "reps": "15"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Calf stretch — 30 sec each",
+                "Pigeon pose — 45 sec each side",
+            ],
+        },
+        "advanced": {
+            "base_duration": "30-40 min",
+            "warm_up": [
+                "5 min easy jog",
+                "Leg swings — 10 each side",
+                "Walking lunges — 10 each side",
+            ],
+            "exercises": [
+                {"name": "Back Squat (3s lowering)", "sets": 3, "reps": "6-8"},
+                {"name": "Weighted Walking Lunge", "sets": 3, "reps": "10 each side"},
+                {"name": "Weighted Step-ups", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Single-leg Romanian Deadlift",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {"name": "Calf Raises (straight & bent knee)", "sets": 3, "reps": "15"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Calf stretch — 30 sec each",
+                "Pigeon pose — 60 sec each side",
+            ],
+        },
+    },
+    # ── Flat to Mountain: Session B — descending resilience ───────────────
+    # Eccentric and plyometric work: the gym analogue of descent damage, and
+    # the repeated-bout protection a flat-terrain runner cannot get outdoors.
+    "descent": {
+        "beginner": {
+            "base_duration": "25-30 min",
+            "warm_up": [
+                "5 min easy walk",
+                "Ankle circles — 10 each side",
+                "Bodyweight squats — 10 reps",
+            ],
+            "exercises": [
+                {"name": "Slow Eccentric Squat (5s down)", "sets": 2, "reps": "6"},
+                {"name": "Lateral Lunge", "sets": 2, "reps": "8 each side"},
+                {
+                    "name": "Box Step-Down (slow eccentric)",
+                    "sets": 2,
+                    "reps": "8 each side",
+                },
+                {
+                    "name": "Single-leg Balance + Reach",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
+                {"name": "Plank", "sets": 3, "reps": "30 sec hold"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Hamstring stretch — 30 sec each",
+                "Child's pose — 45 sec",
+            ],
+        },
+        "intermediate": {
+            "base_duration": "30-35 min",
+            "warm_up": [
+                "5 min easy walk or light jog",
+                "Leg swings — 10 each side",
+                "Ankle circles — 10 each side",
+            ],
+            "exercises": [
+                {"name": "Slow Eccentric Squat (5s down)", "sets": 3, "reps": "6"},
+                {"name": "Lateral Lunge", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Box Step-Down (slow eccentric)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {"name": "Squat Jump (land soft)", "sets": 3, "reps": "6"},
+                {
+                    "name": "Single-leg Balance + Reach",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
+                {"name": "Plank + Side Planks", "sets": 3, "reps": "40 sec each"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Hamstring stretch — 30 sec each",
+                "Child's pose — 45 sec",
+            ],
+        },
+        "advanced": {
+            "base_duration": "30-40 min",
+            "warm_up": [
+                "5 min easy jog",
+                "Leg swings — 10 each side",
+                "Walking lunges — 10 each side",
+            ],
+            "exercises": [
+                {"name": "Slow Eccentric Squat (5s down)", "sets": 3, "reps": "6"},
+                {"name": "Lateral Lunge", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Box Step-Down (slow eccentric)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {"name": "Drop Jump (land soft and quiet)", "sets": 3, "reps": "6"},
+                {
+                    "name": "Single-leg Balance + Reach (eyes closed)",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
+                {"name": "Plank + Side Planks", "sets": 3, "reps": "40 sec each"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Hamstring stretch — 30 sec each",
+                "Child's pose — 60 sec",
+            ],
+        },
+    },
 }

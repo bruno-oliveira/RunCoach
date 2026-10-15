@@ -1,10 +1,11 @@
 """PlanRequest schema with validators for the main road/trail plan flow."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
+    from app.core.training.custom_plan import CustomPlanSpec
     from app.core.training.physiology.environment import EnvironmentalConditions
 
 from app.core.training.profiles.backyard_profile import (
@@ -30,6 +31,7 @@ from app.core.training.training_config import (
 from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,
+    InvalidCustomPlanException,
     ZeroMileageUnsupportedException,
 )
 from app.schemas.plan_config import _MILEAGE_CONFIG, compute_vdot_from_time
@@ -197,6 +199,10 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     logged_easy_pace: Optional[float] = Field(default=None, exclude=True)
     goal_pace_min_km: Optional[float] = Field(default=None, exclude=True)
     current_pace_min_km: Optional[float] = Field(default=None, exclude=True)
+
+    # A custom plan's choices (``CustomPlanSpec.to_json`` shape). Absent for
+    # every generated plan; validated against the request below.
+    custom_spec: Optional[Dict[str, Any]] = Field(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -622,4 +628,54 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                         f"race ({self.vdot:.1f} → {self.goal_vdot:.1f}). "
                         "Consider a more conservative goal or extend your training."
                     )
+        return self
+
+    def custom_plan_spec(self) -> Optional["CustomPlanSpec"]:
+        """The parsed custom-plan choices, or ``None`` for a generated plan."""
+        if self.custom_spec is None:
+            return None
+        from app.core.training.custom_plan import CustomPlanSpec
+
+        return CustomPlanSpec.from_json(self.custom_spec)
+
+    @model_validator(mode="after")
+    def validate_custom_spec(self) -> "PlanRequest":
+        """A custom plan's choices must fit this request's grid and goal.
+
+        Runs last, after the distance, runs and mileage checks, so a request
+        that fails those reports its own reason rather than a cell problem.
+        """
+        if self.custom_spec is None:
+            return self
+        from app.core.training.custom_plan import validate_spec
+        from app.core.training.profiles.trail_profile import classify_trail
+
+        if self.is_backyard or self.current_km == 0:
+            raise InvalidCustomPlanException(
+                "Custom plans need an existing running base and a road or trail goal."
+            )
+        try:
+            spec = self.custom_plan_spec()
+        except (KeyError, TypeError, ValueError):
+            raise InvalidCustomPlanException("The chosen sessions could not be read.")
+        assert spec is not None
+        trail_profile = (
+            classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+            if self.is_trail
+            else None
+        )
+        problems = validate_spec(
+            spec,
+            runs_per_week=self.max_runs_per_week,
+            target_distance=self.target_distance,
+            trail_profile=trail_profile,
+            terrain=self.resolved_training_terrain(),
+        )
+        if problems:
+            raise InvalidCustomPlanException(
+                "Some of the chosen sessions don't fit this plan. "
+                "Check the highlighted choices and try again.",
+                problems,
+            )
+        self.custom_spec = spec.to_json()
         return self

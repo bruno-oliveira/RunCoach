@@ -153,6 +153,16 @@ _CANONICAL_SPECS: Dict[str, Dict[str, Any]] = {
     "half_race_pace_segments": {"family": "cruise", "min_reps": 2, "max_reps": 4},
     # Marathon-pace blocks — long canonical blocks.
     "marathon_mp_blocks": {"family": "marathon", "min_reps": 2, "max_reps": 4},
+    # Flat to Mountain sessions (custom plans only).
+    "ftm_800s": {"family": "vo2max", "rep_m": 800, "min_reps": 4, "max_reps": 10},
+    "ftm_km_cutdowns": {
+        "family": "vo2max",
+        "rep_m": 1000,
+        "min_reps": 3,
+        "max_reps": 6,
+    },
+    "ftm_broken_tempo": {"family": "cruise", "min_reps": 2, "max_reps": 2},
+    "ftm_hour_of_power": {"family": "cruise", "min_reps": 3, "max_reps": 3},
 }
 
 
@@ -475,8 +485,41 @@ def _proprioception_circuit_cadence(d: float) -> str:
     return f"Every ~{d / circuits:.0f}km, stop for"
 
 
+def _three_minute_reps(d: float) -> int:
+    """Rep count for 3 min hard / 2 min easy (ftm_three_minute_repeats)."""
+    return _fartlek_reps(d, default=6, lo=4, hi=7)
+
+
+def _kenyan_fartlek_reps(d: float) -> int:
+    """Rep count for 1 min hard / 1 min easy (ftm_kenyan_fartlek)."""
+    return _fartlek_reps(d, on_min=1, off_min=1, default=15, lo=8, hi=20)
+
+
 # Each entry generates a complete description from the actual distance.
 _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
+    # -- Flat to Mountain sessions (custom plans only) --
+    "ftm_800s": _canonical_rep_desc(
+        "ftm_800s", "at 5K effort", "an equal-time easy jog between reps"
+    ),
+    "ftm_km_cutdowns": _canonical_rep_desc(
+        "ftm_km_cutdowns", "from threshold effort, each one a little faster,"
+    ),
+    "ftm_broken_tempo": _canonical_rep_desc(
+        "ftm_broken_tempo", "at threshold effort", "an easy jog between them"
+    ),
+    "ftm_hour_of_power": _canonical_rep_desc(
+        "ftm_hour_of_power", "at threshold effort", "an easy jog between them"
+    ),
+    "ftm_three_minute_repeats": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_three_minute_reps(d)} x "
+        f"(3 min hard at 5K effort / 2 min easy jog), by feel. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "ftm_kenyan_fartlek": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Alternate "
+        f"{_kenyan_fartlek_reps(d)} x (1 min hard / 1 min easy) as one continuous "
+        f"block, effort by feel. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
     "5k_vo2max_400s": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_400_reps(d)} x 400m at 5K pace "
         f"with 90s easy jog recovery between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."

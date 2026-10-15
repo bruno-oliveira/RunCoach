@@ -21,6 +21,9 @@ Each entry:
 
 from typing import Dict, List
 
+from app.core.training.workouts.key_workout_data_flat_to_mountain import (
+    FLAT_TO_MOUNTAIN,
+)
 from app.core.training.workouts.key_workout_data_long import WORKOUTS_LONG
 
 # Short-distance workouts (5K, 10K, Half Marathon)
@@ -1012,5 +1015,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
 ]
 
-# Combined list of all workouts
-WORKOUTS: List[Dict] = _WORKOUTS_SHORT + WORKOUTS_LONG
+# Combined list of all workouts. The Flat to Mountain sessions are custom-plan
+# only (``custom_only``): catalogued here so ``get_by_id`` resolves them, kept
+# out of the automatic rotation by ``_CUSTOM_ONLY_IDS``.
+WORKOUTS: List[Dict] = _WORKOUTS_SHORT + WORKOUTS_LONG + FLAT_TO_MOUNTAIN

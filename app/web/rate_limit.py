@@ -191,6 +191,11 @@ account_deletion_limiter = _limiter(
 )
 # Plan generation / PDF download are CPU-intensive; cap per-IP to avoid resource exhaustion.
 plan_generation_limiter = _limiter("plan_generation", max_requests=5, window_seconds=60)
+# A custom-plan preview generates a plan (and stores nothing); the builder asks
+# for one each time a choice changes, so it gets more room than creation.
+custom_plan_preview_limiter = _limiter(
+    "custom_plan_preview", max_requests=30, window_seconds=60
+)
 # FIT files are cheap to build and downloaded in batches (a week of workouts
 # at a time), so they get their own, more generous budget than PDF/plan gen.
 fit_download_limiter = _limiter("fit_download", max_requests=30, window_seconds=60)

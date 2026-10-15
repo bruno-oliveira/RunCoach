@@ -5,7 +5,7 @@ long, tempo, interval, hill, race) with appropriate descriptions and pace
 zones.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.coaching.training_tips import get_tips_for_week
 from app.core.formatting import format_km
@@ -105,8 +105,13 @@ def attach_strength_sessions(
     trail_profile=None,
     attach_types: tuple = ("easy",),
     max_sessions: Optional[int] = None,
+    custom: Optional[Tuple[int, str]] = None,
 ) -> List[Dict[str, Any]]:
     """Attach periodized strength sessions to a week's run days.
+
+    ``custom`` is a custom plan's ``(sessions_per_week, template)`` choice, and
+    places sessions by the Flat to Mountain rules instead (see
+    :func:`_attach_custom_strength`).
 
     Shared by every generator (road / performance / fitness / beginner) so
     they all get the same phase/experience/trail-aware strength engine
@@ -122,6 +127,15 @@ def attach_strength_sessions(
     returns the list of attached sessions for the week-level
     ``strength_training`` summary.
     """
+    if custom is not None:
+        return _attach_custom_strength(
+            workouts,
+            week_number,
+            phase,
+            experience_level=experience_level,
+            sessions_per_week=custom[0],
+            template=custom[1],
+        )
     attached: List[Dict[str, Any]] = []
     session_index = 0
     for workout in workouts:
@@ -143,6 +157,53 @@ def attach_strength_sessions(
             workout["strength_session"] = session
             attached.append(session)
             session_index += 1
+    return attached
+
+
+# Strength template → the focus of each session in the week, in order.
+_CUSTOM_STRENGTH_FOCUS = {"climb_descent": ("climb", "descent")}
+
+
+def _attach_custom_strength(
+    workouts: List[Dict[str, Any]],
+    week_number: int,
+    phase: str,
+    *,
+    experience_level: str,
+    sessions_per_week: int,
+    template: str,
+) -> List[Dict[str, Any]]:
+    """Place a custom plan's strength sessions by the Flat to Mountain rules.
+
+    Strength goes on easy days, the first session early in the week and the
+    second as late as allowed, so the two never land back to back. In peak
+    weeks nothing goes on the day before the long run (the book's "never the
+    day before a long run in peak weeks"). The taper keeps one light session,
+    which the taper modifier already doses down. ``template`` "auto" keeps the
+    engine's own focus rotation; "climb_descent" is Session A then Session B.
+    """
+    if sessions_per_week <= 0:
+        return []
+    count = 1 if phase == "taper" else sessions_per_week
+    long_days = {w.get("day") for w in workouts if w.get("type") == "long"}
+    blocked = {d - 1 for d in long_days if d} if phase == "peak" else set()
+    easy = [
+        w for w in workouts if w.get("type") == "easy" and w.get("day") not in blocked
+    ]
+    if not easy:
+        return []
+    chosen = [easy[0], easy[-1]] if count >= 2 and len(easy) >= 2 else easy[:1]
+    focus_order = _CUSTOM_STRENGTH_FOCUS.get(template)
+    attached: List[Dict[str, Any]] = []
+    for index, workout in enumerate(chosen):
+        if focus_order:
+            focus = focus_order[index % len(focus_order)]
+        else:
+            rotation = get_phase_focus_rotation(phase)
+            focus = rotation[index % len(rotation)]
+        session = _build_strength_session(focus, phase, experience_level, week_number)
+        workout["strength_session"] = session
+        attached.append(session)
     return attached
 
 

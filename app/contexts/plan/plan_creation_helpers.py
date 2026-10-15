@@ -48,6 +48,7 @@ def persist_plan_core(
     user: User,
     plan_data: list[dict],
     db: Session,
+    custom_index: Optional[int] = None,
 ) -> TrainingPlan:
     training_plan = TrainingPlan(
         user_id=user.id,
@@ -85,6 +86,8 @@ def persist_plan_core(
             else None
         ),
         frequency_composer=_composer_name(plan_request),
+        custom_spec=plan_request.custom_spec,
+        custom_index=custom_index,
     )
     db.add(training_plan)
     db.flush()

@@ -338,6 +338,32 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   never per step, because the Intervals import stores one average per run and
   `run_logs.splits` is empty for those rows.
 
+- **Custom plans** (`/plans/custom/new`) — the runner chooses the sessions,
+  the engine still sizes them. `core/training/custom_plan.py` holds the grid
+  (`slot_grid`: base weeks offer only the long run, because no composer gives
+  base a quality day; 3–4 runs have one QUALITY cell whose pick *types* that
+  week's quality day; 5–6 have SPEED + THRESHOLD), eligibility, validation and
+  `CustomRotation`. The generator takes `custom_spec` and changes only *what*
+  fills a day: `rewrite_distribution` re-types the quality days **before**
+  `_quality_budgets` (budgets are per type), and a pick is installed through
+  `overlay_key_workout(force_id=…)` behind the same budget floor the rotation
+  uses (`fits_key_workout_budget`); a day too small for every choice keeps the
+  engine's session and says so (`custom_deferral_code`). **Long runs are
+  shapes, not key workouts** (`workouts/long_run_shapes.py`): a pinned long run
+  is refused by the volume guard in most build weeks at 3 and 5 runs, so a
+  shape carries `long_shape_id` (no `key_workout_id`), stays flexible, and
+  every resize re-lays it — `rebuild_long_run`, `reshape_long_card` in the
+  adaptation/reconcile/adjustment paths. Rebuild a long run through those, not
+  `build_workout`, or a chosen negative split quietly becomes a plain long run.
+  The Flat to Mountain quality sessions (`key_workout_data_flat_to_mountain.py`)
+  are `custom_only` — `_CUSTOM_ONLY_IDS` keeps them out of the automatic
+  rotation, so adding one changes no existing plan. Strength `climb_descent`
+  is the book's Session A/B, never on the day before a peak-week long run.
+  `training_plans.custom_spec` is part of plan identity (`find_duplicate`) and
+  `custom_index` is the never-reused N of "Custom Plan N · <distance>"
+  (`plan_type_registry.custom_plan_title`). The builder posts to the ordinary
+  `/generate-plan`; `/api/custom-plans/preview` generates without storing.
+
 - **Coach page** (`/coach`; `/analytics` redirects) — answers two questions and
   nothing else: *is what I am doing enough for my goal?* and *what does my
   recent running say I should change?* It takes **no input** — no plan picker,

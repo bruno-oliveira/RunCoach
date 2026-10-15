@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 from app.core.training.workouts import workout_builders
+from app.core.training.workouts.long_run_shapes import build_shaped_long_run
 
 
 class WorkoutBuilder(Protocol):
@@ -201,6 +202,37 @@ def build_workout(
     if spec is None:
         raise ValueError(f"Unknown workout_type: {workout_type}")
     return spec.builder(
+        day=day,
+        distance=distance,
+        total_km=total_km,
+        phase=phase,
+        pace_zones=pace_zones,
+    )
+
+
+def rebuild_card_workout(
+    card: Dict[str, Any],
+    workout_type: str,
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """``build_workout`` for an existing card: a shaped long run keeps its shape.
+
+    Every path that rebuilds a day at a new distance (adaptation, the safety
+    reconcile, a runner's adjustment) goes through here rather than
+    ``build_workout``, so a custom plan's chosen long run (``long_shape_id``) is
+    re-laid at the new distance instead of reverting to the generic long run.
+    """
+    if workout_type == "long" and card.get("long_shape_id"):
+        shaped = build_shaped_long_run(card["long_shape_id"], day, distance, pace_zones)
+        if shaped is not None:
+            return shaped
+    return build_workout(
+        workout_type,
         day=day,
         distance=distance,
         total_km=total_km,

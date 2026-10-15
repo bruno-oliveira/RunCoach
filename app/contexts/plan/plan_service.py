@@ -169,6 +169,7 @@ class PlanService:
             backyard_profile=plan_request.backyard_profile(),
             goal_pace_min_km=plan_request.goal_pace_min_km,
             easy_pace_min_km=plan_request.logged_easy_pace,
+            custom_spec=plan_request.custom_plan_spec(),
         )
 
         # The generator may reduce an unviable requested frequency (including
@@ -204,8 +205,13 @@ class PlanService:
                 return existing, existing.plan_data if existing.plan_data else []
 
         try:
+            custom_index = (
+                self._plan_repo_factory(db).next_custom_index(user.id)
+                if resolved_request.custom_spec is not None
+                else None
+            )
             training_plan = _create.persist_plan_core(
-                resolved_request, user, plan_data, db
+                resolved_request, user, plan_data, db, custom_index=custom_index
             )
             _create.persist_weekly_workouts(training_plan, plan_data, db)
             # Persist the stated race before zones so the LTHR estimate and the

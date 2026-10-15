@@ -11,6 +11,7 @@ the structured ``steps`` (and, for generated plans that use ``description`` not
 from typing import Any, Optional
 
 from app.core.training.workouts import key_workout_library as _kwlib
+from app.core.training.workouts.long_run_shapes import reshape_long_card
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
 from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
@@ -34,6 +35,7 @@ _OVERLAY_KEYS = (
     "key_workout_name",
     "structure",
     "key_workout_rationale",
+    "long_shape_id",
 )
 
 
@@ -89,6 +91,10 @@ def _regenerate(
     if not type_changed and wo.get("key_workout_id"):
         if _kwlib.rebuild_key_workout(wo, pace_zones):
             return
+    # ... and a custom plan's chosen long run by re-laying its shape.
+    if not type_changed and reshape_long_card(wo, new_distance, pace_zones):
+        wo["notes"] = wo.get("description", "")
+        return
 
     built = build_workout(
         target_type,

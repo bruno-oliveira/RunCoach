@@ -56,6 +56,19 @@ class ZeroMileageUnsupportedException(UnrealisticGoalException):
     pass
 
 
+class InvalidCustomPlanException(ValidationException):
+    """A custom plan's choices cannot become a plan.
+
+    ``problems`` carries the keyed reasons (``custom_plan.Problem``) so the
+    builder page can point at the cell at fault; the message is the summary a
+    form error shows.
+    """
+
+    def __init__(self, message: str, problems: Optional[list] = None):
+        self.problems = list(problems or [])
+        super().__init__(message, message)
+
+
 class UnverifiedEmailException(RunCoachException):
     """Google sign-in whose unverified email collides with an existing account.
 

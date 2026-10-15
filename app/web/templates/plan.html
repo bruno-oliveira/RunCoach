@@ -72,7 +72,11 @@
         <p>You finished your {{ target_distance }}km plan. {{ weeks }} weeks of work, done.</p>
         {% endif %}
         {% else %}
+        {% if custom_title %}
+        <h1>{{ custom_title }}</h1>
+        {% else %}
         <h1><span data-i18n="plan.your_plan">Your Training Plan</span></h1>
+        {% endif %}
         {% if experience_level %}
         <div class="tier-badge">
             <span class="badge badge-{{ experience_level }}">{{ experience_level | title }} Plan</span>

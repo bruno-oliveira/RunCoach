@@ -61,6 +61,8 @@
         </div>
         {% endif %}
 
+        <p class="plan-form-custom-link"><a href="/plans/custom/new">Prefer to pick your own sessions? Build your own plan</a></p>
+
         <form method="post" action="/generate-plan" class="plan-form{% if not user %} anon-plan-form{% endif %}" id="plan-form">
             <!-- Plan mode toggle -->
             <div class="mode-toggle-wrap">

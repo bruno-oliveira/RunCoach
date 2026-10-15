@@ -17,6 +17,7 @@ from app.core.training.workouts.key_workout_library.rewrites import (
     _compound_800_400_reps,
     _duration_pyramid_min,
     _fartlek_reps,
+    _kenyan_fartlek_reps,
     _mile_rep_reps,
     _mp_cutdown_reps,
     _on_off_k_reps,
@@ -25,6 +26,7 @@ from app.core.training.workouts.key_workout_library.rewrites import (
     _road_pyramid_pattern_m,
     _rolling_400_reps,
     _thirty_thirty_reps,
+    _three_minute_reps,
     _vo2max_400_reps,
     _vo2max_km_reps,
     _yasso_800_reps,
@@ -112,6 +114,23 @@ def _goal_race_zone(pace_zones: Optional[Dict], fallback: str) -> str:
 _KEY_WORKOUT_STEP_BUILDERS: Dict[
     str, Callable[[float, Optional[Dict]], List[Dict[str, Any]]]
 ] = {
+    # -- Flat to Mountain sessions (custom plans only) --
+    "ftm_800s": _canonical_meter_reps(
+        "ftm_800s", "I", recovery_label="equal-time easy jog recovery"
+    ),
+    "ftm_km_cutdowns": _canonical_meter_reps("ftm_km_cutdowns", "T"),
+    "ftm_broken_tempo": _canonical_meter_reps(
+        "ftm_broken_tempo", "T", recovery_label="easy jog between blocks"
+    ),
+    "ftm_hour_of_power": _canonical_meter_reps(
+        "ftm_hour_of_power", "T", recovery_label="easy jog between blocks"
+    ),
+    "ftm_three_minute_repeats": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=_three_minute_reps(d), on_s=180, off_s=120, on_zone="I"
+    ),
+    "ftm_kenyan_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=_kenyan_fartlek_reps(d), on_s=60, off_s=60, on_zone="10K"
+    ),
     "5k_vo2max_400s": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
         pz,

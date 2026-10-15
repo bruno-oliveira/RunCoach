@@ -234,6 +234,19 @@ def get_handler_for_plan(plan: "TrainingPlan") -> PlanTypeHandler:
     )
 
 
+def custom_plan_title(plan: "TrainingPlan") -> Optional[str]:
+    """ "Custom Plan N · <distance>" for a custom plan, ``None`` for any other.
+
+    A title rather than a label: ``display_label`` names the race (and is
+    printed as "<label> Training Plan" or "Optimized for a <label> goal"), so a
+    custom plan keeps its race label there and carries its own name here.
+    """
+    index = getattr(plan, "custom_index", None)
+    if getattr(plan, "custom_spec", None) is None or not index:
+        return None
+    return f"Custom Plan {index} · {display_label(plan)}"
+
+
 def display_label(plan: "TrainingPlan", *, space_before_km: bool = False) -> str:
     """Resolve the user-facing label for a plan.
 

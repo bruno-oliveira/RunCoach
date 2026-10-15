@@ -39,6 +39,13 @@ from app.contexts.plan.generators.plan_passes import (
 )
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
 from app.contexts.plan.generators.workout_scaler import reclamp_quality_to_long_run
+from app.core.training.custom_plan import (
+    MIN_RUNS_PER_WEEK as CUSTOM_MIN_RUNS,
+)
+from app.core.training.custom_plan import (
+    CustomPlanSpec,
+    CustomRotation,
+)
 from app.core.training.frequency import get_composer
 from app.core.training.periodization import mileage_progression
 from app.core.training.periodization.phase_calculator import calculate_phases
@@ -56,6 +63,7 @@ from app.core.training.profiles.trail_profile import (
 from app.core.training.training_config import MIN_VIABLE_RUN_KM
 from app.core.training.workouts.key_workout_library import KeyWorkoutRotationState
 from app.exceptions import (
+    InvalidCustomPlanException,
     PlanGenerationException,
     ZeroMileageUnsupportedException,
 )
@@ -388,8 +396,13 @@ class TrainingPlanGenerator:
         backyard_profile: Optional[BackyardProfile] = None,
         goal_pace_min_km: Optional[float] = None,
         easy_pace_min_km: Optional[float] = None,
+        custom_spec: Optional[CustomPlanSpec] = None,
     ) -> List[Dict[str, Any]]:
         """Generate a comprehensive training plan.
+
+        ``custom_spec`` makes it a custom plan: the runner's chosen sessions
+        fill the long run and the build/peak quality days, and everything else
+        is generated exactly as for any plan (``app.core.training.custom_plan``).
 
         ``vdot`` is the fitness the training paces are built from — what the
         runner can do now. ``goal_pace_min_km`` is what they are chasing: on a
@@ -421,6 +434,12 @@ class TrainingPlanGenerator:
         if backyard_profile is not None and trail_profile is None:
             trail_profile = backyard_profile.as_trail_profile()
 
+        if custom_spec is not None and (current_km == 0 or backyard_profile):
+            # The beginner engine installs no chosen sessions, and a backyard
+            # weekend belongs to its loop simulations.
+            raise InvalidCustomPlanException(
+                "A custom plan needs an existing running base and a road or trail goal."
+            )
         if current_km == 0:
             return self._generate_from_zero(target_distance, weeks, max_runs_per_week)
         enforce_engine_floors(
@@ -436,6 +455,16 @@ class TrainingPlanGenerator:
             easy_pace_min_km,
         )
         max_runs_per_week = self._resolve_run_frequency(current_km, max_runs_per_week)
+        custom_rotation = None
+        if custom_spec is not None:
+            if max_runs_per_week < CUSTOM_MIN_RUNS:
+                raise InvalidCustomPlanException(
+                    f"A custom plan needs at least {CUSTOM_MIN_RUNS} runs a week."
+                )
+            custom_rotation = CustomRotation(custom_spec, max_runs_per_week)
+            # The intensive weekend installs sessions of its own over the
+            # runner's choices.
+            intensive_weekend_enabled = False
 
         # Select the frequency composer: drives structural decisions (quality
         # count, long-run ratios, day scheduling) while the existing math
@@ -498,6 +527,7 @@ class TrainingPlanGenerator:
                 backyard_profile=backyard_profile,
                 backyard_schedule=backyard_schedule,
                 composer=composer,
+                custom_rotation=custom_rotation,
             )
             is_recovery = weekly_plan.get("is_recovery", False)
 

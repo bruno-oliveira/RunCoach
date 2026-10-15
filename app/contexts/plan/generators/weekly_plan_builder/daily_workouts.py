@@ -9,7 +9,7 @@ library). Fitting the result to the week's budget is the orchestrator's job.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
     SECOND_DAY_INDEX,
@@ -22,6 +22,14 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
 )
 from app.contexts.plan.generators.workout_scaler import long_run_pace_min_km
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
+from app.core.training.custom_plan import (
+    CUSTOM_PHASES,
+    CustomRotation,
+    SlotKind,
+    quality_assignment,
+    rewrite_distribution,
+    session_type,
+)
 from app.core.training.periodization import long_run_calculator
 from app.core.training.periodization import workout_distribution as workout_dist_mod
 from app.core.training.periodization.quality_caps import (
@@ -42,6 +50,10 @@ from app.core.training.workouts.key_workout_library import (
     KeyWorkoutRotationState,
     overlay_key_workout,
 )
+from app.core.training.workouts.key_workout_library.selection import (
+    fits_key_workout_budget,
+)
+from app.core.training.workouts.long_run_shapes import build_shaped_long_run
 from app.domain.frequency import FrequencyComposer, SlotType
 
 QUALITY_TYPES = ("tempo", "interval", "hill")
@@ -220,8 +232,14 @@ def generate_daily_workouts(
     rotation_state: Optional[KeyWorkoutRotationState] = None,
     composer: Optional[FrequencyComposer] = None,
     is_backyard: bool = False,
+    custom_rotation: Optional[CustomRotation] = None,
 ) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week.
+
+    ``custom_rotation`` makes this a custom plan's week: the runner's chosen
+    sessions fill the long run and the build/peak quality days (see
+    ``app.core.training.custom_plan``). The budgets, caps and placement are
+    unchanged — a choice decides *what* a day is, never how much of it.
 
     ``is_backyard`` keeps weekday easy runs uncapped: backyard volume is bounded
     by the goal's own weekly min/max, and its highest-volume runners carry it in
@@ -249,6 +267,18 @@ def generate_daily_workouts(
         prev_long_run_km=prev_long_run_km,
         composer=composer,
     )
+    # A custom week types its quality days by the runner's picks *before* the
+    # budgets, which are sized per type.
+    assignment = (
+        quality_assignment(custom_rotation, phase, distribution)
+        if custom_rotation is not None
+        else None
+    )
+    if assignment:
+        rewritten = rewrite_distribution(distribution, assignment)
+        distribution.clear()
+        distribution.update(rewritten)
+
     quality_distances = _quality_budgets(
         total_km,
         phase,
@@ -327,6 +357,13 @@ def generate_daily_workouts(
     # drift the fixed prescription leaves behind.
     quality_stays_formulaic = max_runs is not None and max_runs <= 2
 
+    # A custom plan's long run is a shape laid over the day's distance, so it
+    # stays flexible and the volume guard above has nothing to refuse.
+    long_shape_id = _custom_long_shape(
+        custom_rotation, phase, is_recovery_week, workout_types
+    )
+    pending_picks = list(assignment or [])
+
     # What: build each day's session.
     slot_labels = _build_slot_labels(composer, phase, workout_types) if composer else {}
     easy_run_idx = 0
@@ -363,12 +400,53 @@ def generate_daily_workouts(
             phase,
             pace_zones,
         )
+        if workout_type == "long" and long_shape_id:
+            workout = (
+                build_shaped_long_run(long_shape_id, day + 1, distance, pace_zones)
+                or workout
+            )
         if day in slot_labels:
             workout["slot_label"] = slot_labels[day]
 
-        skip_overlay = (workout_type == "long" and long_run_must_stay_flexible) or (
-            is_quality and quality_stays_formulaic
-        )
+        skip_overlay = (
+            workout_type == "long"
+            and (long_run_must_stay_flexible or bool(long_shape_id))
+        ) or (is_quality and quality_stays_formulaic)
+        pick = _take_pick(pending_picks, workout_type) if is_quality else None
+        if pick is not None and custom_rotation is not None:
+            slot, menu = pick
+            turn = next(
+                (
+                    i
+                    for i, wid in enumerate(menu)
+                    if session_type(wid) == workout_type
+                    and fits_key_workout_budget(wid, workout.get("distance"))
+                ),
+                None,
+            )
+            chosen = menu[turn] if turn is not None else None
+            custom_rotation.advance(phase, slot, 1 if turn is None else turn + 1)
+            if chosen is None:
+                # Every choice for this cell needs more room than the day has;
+                # the engine's own session runs instead, and the card says why.
+                workout["custom_deferral_code"] = "quality_budget"
+            else:
+                overlay_key_workout(
+                    workout,
+                    workout_type,
+                    phase,
+                    target_distance,
+                    week_in_phase,
+                    terrain,
+                    pace_zones,
+                    trail_profile=trail_profile,
+                    force_id=chosen,
+                    max_distance=long_run_distance * MAX_KEY_WORKOUT_VS_LONG_RUN,
+                    weekly_km=total_km,
+                    state=rotation_state,
+                    week_number=week_number,
+                )
+            skip_overlay = True
         if not skip_overlay:
             # 0-based count of same-type quality slots already overlaid this
             # week: a second tempo/interval slot must rotate to a different
@@ -400,8 +478,8 @@ def generate_daily_workouts(
                 week_number=week_number,
             )
 
-        workout["coaching_rationale"] = workout.get(
-            "key_workout_rationale"
+        workout["coaching_rationale"] = (
+            workout.get("key_workout_rationale") or workout.get("coaching_rationale")
         ) or generate_coaching_note(
             workout_type,
             phase,
@@ -419,6 +497,51 @@ def generate_daily_workouts(
         experience_level=experience_level,
         target_distance=target_distance,
         trail_profile=trail_profile,
+        custom=(
+            (
+                custom_rotation.spec.strength.sessions_per_week,
+                custom_rotation.spec.strength.template,
+            )
+            if custom_rotation is not None
+            else None
+        ),
     )
 
     return workouts
+
+
+def _custom_long_shape(
+    rotation: Optional[CustomRotation],
+    phase: str,
+    is_recovery_week: bool,
+    workout_types: List[Optional[str]],
+) -> Optional[str]:
+    """The shape this week's long run takes, or ``None`` for the engine's own.
+
+    Recovery weeks and the taper keep the plain long run: a deload is not the
+    week to rehearse a fast finish.
+    """
+    if rotation is None or phase not in CUSTOM_PHASES or is_recovery_week:
+        return None
+    if "long" not in workout_types:
+        return None
+    menu = rotation.ordered(phase, SlotKind.LONG)
+    if not menu:
+        return None
+    rotation.advance(phase, SlotKind.LONG)
+    return menu[0]
+
+
+def _take_pick(
+    pending: List[Tuple[SlotKind, List[str]]], workout_type: str
+) -> Optional[Tuple[SlotKind, List[str]]]:
+    """Claim the runner's pick for a quality day of ``workout_type``.
+
+    ``rewrite_distribution`` typed the days from the picks, so a day normally
+    finds its own; a day the low-budget pass re-typed falls back to the next
+    pick in order.
+    """
+    for i, (slot, menu) in enumerate(pending):
+        if menu and session_type(menu[0]) == workout_type:
+            return pending.pop(i)
+    return pending.pop(0) if pending else None

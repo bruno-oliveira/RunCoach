@@ -78,6 +78,14 @@ class TrainingPlan(Base):
     backyard_loop_km: Mapped[float | None] = mapped_column(Float)
     backyard_loop_elevation_gain_m: Mapped[float | None] = mapped_column(Float)
 
+    # Custom plans: the sessions the runner chose (``CustomPlanSpec.to_json``)
+    # and the N of "Custom Plan N". NULL on every generated plan.
+    # ``none_as_null``: a plain JSON column stores Python None as the JSON text
+    # ``null``, which ``IS NULL`` never matches — and ``find_duplicate`` tells a
+    # generated plan from a custom one by exactly that test.
+    custom_spec: Mapped[Any | None] = mapped_column(JSON(none_as_null=True))
+    custom_index: Mapped[int | None] = mapped_column(Integer)
+
     hr_zones_data: Mapped[Any | None] = mapped_column(JSON)
     nutrition_phases_data: Mapped[Any | None] = mapped_column(JSON)
     race_protocol_data: Mapped[Any | None] = mapped_column(JSON)

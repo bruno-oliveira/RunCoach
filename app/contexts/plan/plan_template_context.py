@@ -6,6 +6,7 @@ from typing import Any, Optional
 from fastapi import Request
 from sqlalchemy import func
 
+from app.contexts.plan.plan_type_registry import custom_plan_title
 from app.core.coaching.readiness_checkin import score_checkin
 from app.core.coaching.today_card import TodayCard, build_today_card
 from app.core.time_utils import local_today
@@ -107,6 +108,7 @@ def plan_view_context(
             training_plan.current_weekly_km or 0
         ),
         "target_distance": training_plan.target_distance,
+        "custom_title": custom_plan_title(training_plan),
         "is_trail": bool(getattr(training_plan, "is_trail", False)),
         # A backyard plan travels through the engine as a trail plan, so every
         # `is_trail` branch below would otherwise render its clamped projection
