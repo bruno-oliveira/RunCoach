@@ -2,6 +2,7 @@
 
 import json
 from datetime import date
+from types import SimpleNamespace
 
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
@@ -10,6 +11,7 @@ from app.contexts.plan.plan_status import plan_status
 from app.core.training.custom_plan import default_spec
 from app.models import TrainingPlan, User
 from app.schemas import PlanRequest
+from app.web.templating import create_templates
 
 ORIGIN = {"Origin": "http://testserver"}
 
@@ -33,6 +35,17 @@ def test_builder_page_renders(client):
     response = client.get("/plans/custom/new")
     assert response.status_code == 200
     assert "Build your own plan" in response.text
+
+
+def test_signed_in_navbar_links_to_the_builder():
+    template = create_templates().env.from_string(
+        '{% from "components/nav.html" import render as nav %}'
+        "{{ nav(user=user, current_page='custom_plan') }}"
+    )
+    user = SimpleNamespace(id="u1", name="Nav", intervals_athlete_id=None)
+    html = template.render(user=user)
+    assert 'href="/plans/custom/new" class="nav-link is-active"' in html
+    assert 'data-i18n="nav.custom_plan"' in html
 
 
 def test_options_follow_the_frequency(client):

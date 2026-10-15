@@ -12,7 +12,10 @@
     <div class="header">
         <h1><span data-i18n="myplans.title">My Training Plans</span></h1>
         <p class="plan-counter">{{ plan_count }} of {{ max_plans }} plans used</p>
-        <a href="/" class="back-link">&larr; Back to Home</a>
+        <div class="header-links">
+            <a href="/" class="back-link">&larr; Back to Home</a>
+            {% if plans %}<a href="/plans/custom/new" class="back-link">Build your own plan</a>{% endif %}
+        </div>
     </div>
 
     {% if plans %}

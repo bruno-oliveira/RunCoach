@@ -17,7 +17,7 @@
 {% macro render(user=None, path='/', active_plan_id=None) %}
 {% set path = path or '/' %}
 {% set is_home    = path == '/' %}
-{% set is_plans   = path.startswith('/my-plans') or path.startswith('/plan/') %}
+{% set is_plans   = path.startswith('/my-plans') or path.startswith('/plan/') or path.startswith('/plans/') %}
 {% set is_coach   = path.startswith('/coach') %}
 {% set is_run     = path.startswith('/run') %}
 {% set is_recipes = path.startswith('/recipes') %}
