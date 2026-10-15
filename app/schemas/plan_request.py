@@ -670,6 +670,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             target_distance=self.target_distance,
             trail_profile=trail_profile,
             terrain=self.resolved_training_terrain(),
+            weeks=self.weeks,
         )
         if problems:
             raise InvalidCustomPlanException(

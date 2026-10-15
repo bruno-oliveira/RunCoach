@@ -343,7 +343,10 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   (`slot_grid`: base weeks offer only the long run, because no composer gives
   base a quality day; 3–4 runs have one QUALITY cell whose pick *types* that
   week's quality day; 5–6 have SPEED + THRESHOLD), eligibility, validation and
-  `CustomRotation`. The generator takes `custom_spec` and changes only *what*
+  `CustomRotation`. A cell holds up to five choices and never more than its
+  phase has non-recovery weeks (`cell_limits`): recovery weeks install no
+  choice, so an extra pick would never run. The generator takes `custom_spec`
+  and changes only *what*
   fills a day: `rewrite_distribution` re-types the quality days **before**
   `_quality_budgets` (budgets are per type), and a pick is installed through
   `overlay_key_workout(force_id=…)` behind the same budget floor the rotation

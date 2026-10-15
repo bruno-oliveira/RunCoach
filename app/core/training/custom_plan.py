@@ -27,6 +27,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from app.core.training.periodization.phase_calculator import (
+    MIN_WEEKS_FOR_PHASES,
+    calculate_phases,
+    recovery_week_set,
+)
 from app.core.training.workouts.key_workout_library.selection import (
     KeyWorkoutLibrary,
     custom_eligible_sessions,
@@ -36,7 +41,9 @@ from app.core.training.workouts.long_run_shapes import get_shape, shapes_for_pha
 CUSTOM_PHASES: Tuple[str, ...] = ("base", "build", "peak")
 MIN_RUNS_PER_WEEK = 3
 MAX_RUNS_PER_WEEK = 6
-MAX_SESSIONS_PER_CELL = 3
+# A cell takes at most this many choices — and never more than the weeks it
+# fills (``cell_limits``): a choice past that would never come round.
+MAX_SESSIONS_PER_CELL = 5
 MAX_STRENGTH_SESSIONS = 2
 SPEC_VERSION = 1
 
@@ -76,6 +83,46 @@ def slot_grid(runs_per_week: int) -> Dict[str, Tuple[SlotKind, ...]]:
         "base": (SlotKind.LONG,),
         "build": (SlotKind.LONG, *quality),
         "peak": (SlotKind.LONG, *quality),
+    }
+
+
+def phase_loading_weeks(
+    weeks: int, *, target_distance: float, trail_profile=None
+) -> Dict[str, int]:
+    """How many non-recovery weeks each choosable phase has in this plan.
+
+    A recovery week installs none of the runner's choices (it keeps the
+    engine's easy long run and drops the quality day), so these are the weeks
+    a cell's rotation actually walks through.
+    """
+    phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
+    recovery = recovery_week_set(phases)
+    counts: Dict[str, int] = {}
+    start = 1
+    for phase in CUSTOM_PHASES:
+        span = range(start, start + phases[phase])
+        counts[phase] = sum(1 for week in span if week not in recovery)
+        start += phases[phase]
+    return counts
+
+
+def cell_limits(
+    weeks: Optional[int], *, target_distance: float, trail_profile=None
+) -> Dict[str, int]:
+    """The most choices each phase's cells may hold for a plan this long.
+
+    One choice per week the phase fills, up to ``MAX_SESSIONS_PER_CELL``, and
+    never fewer than one. With no length (or one too short to periodise, which
+    generation refuses anyway) every phase gets the ceiling.
+    """
+    if weeks is None or weeks < MIN_WEEKS_FOR_PHASES:
+        return {phase: MAX_SESSIONS_PER_CELL for phase in CUSTOM_PHASES}
+    loading = phase_loading_weeks(
+        weeks, target_distance=target_distance, trail_profile=trail_profile
+    )
+    return {
+        phase: max(1, min(MAX_SESSIONS_PER_CELL, loading[phase]))
+        for phase in CUSTOM_PHASES
     }
 
 
@@ -195,8 +242,13 @@ def validate_spec(
     target_distance: float,
     trail_profile=None,
     terrain: Optional[str] = None,
+    weeks: Optional[int] = None,
 ) -> List[Problem]:
-    """Every reason ``spec`` cannot become a plan; empty when it can."""
+    """Every reason ``spec`` cannot become a plan; empty when it can.
+
+    ``weeks`` bounds each cell by the weeks its phase fills (``cell_limits``);
+    without it only the absolute ceiling applies.
+    """
     problems: List[Problem] = []
     if runs_per_week < MIN_RUNS_PER_WEEK:
         problems.append(Problem("too_few_runs", limit=MIN_RUNS_PER_WEEK))
@@ -212,6 +264,9 @@ def validate_spec(
         problems.append(Problem("strength_template"))
 
     grid = slot_grid(runs_per_week)
+    limits = cell_limits(
+        weeks, target_distance=target_distance, trail_profile=trail_profile
+    )
     for phase, cells in spec.menus.items():
         if phase not in grid:
             problems.append(Problem("unknown_phase", phase=phase))
@@ -226,13 +281,13 @@ def validate_spec(
             if not ids:
                 problems.append(Problem("empty_cell", phase=phase, slot=slot.value))
                 continue
-            if len(ids) > MAX_SESSIONS_PER_CELL:
+            if len(ids) > limits[phase]:
                 problems.append(
                     Problem(
                         "too_many_sessions",
                         phase=phase,
                         slot=slot.value,
-                        limit=MAX_SESSIONS_PER_CELL,
+                        limit=limits[phase],
                     )
                 )
             if len(set(ids)) != len(ids):
@@ -268,13 +323,20 @@ def default_spec(
     target_distance: float,
     trail_profile=None,
     terrain: Optional[str] = None,
+    weeks: Optional[int] = None,
 ) -> CustomPlanSpec:
-    """A valid starting point: the first eligible sessions of every cell.
+    """A valid starting point for every cell, within ``cell_limits``.
 
     The builder page opens on this, so a runner who changes nothing still gets
-    a plan, and every cell shows something real to swap.
+    a plan, and every cell shows something real to swap. A single quality day
+    starts on two *kinds* of session — threshold first from the half marathon
+    up, speed first below it — rather than the catalog's first two, which are
+    both VO2max work and would leave a half marathoner without a tempo.
     """
     menus: Dict[str, Dict[SlotKind, Tuple[str, ...]]] = {}
+    limits = cell_limits(
+        weeks, target_distance=target_distance, trail_profile=trail_profile
+    )
     for phase, slots in slot_grid(runs_per_week).items():
         menus[phase] = {}
         for slot in slots:
@@ -292,9 +354,24 @@ def default_spec(
                     if o.id in ("negative_split_long", "steady_long")
                 ]
                 menus[phase][slot] = tuple(preferred[:2] or [o.id for o in options[:1]])
+            elif slot is SlotKind.QUALITY:
+                menus[phase][slot] = _mixed_quality_default(options, target_distance)
             else:
                 menus[phase][slot] = tuple(o.id for o in options[:2])
+            menus[phase][slot] = menus[phase][slot][: limits[phase]]
     return CustomPlanSpec(menus=menus)
+
+
+def _mixed_quality_default(
+    options: Sequence[SessionOption], target_distance: float
+) -> Tuple[str, ...]:
+    """The first session of the two kinds this goal leans on, in that order."""
+    kinds = ("tempo", "interval") if target_distance >= 21.0 else ("interval", "tempo")
+    picks = [
+        next((o.id for o in options if o.workout_type == kind), None) for kind in kinds
+    ]
+    chosen = tuple(i for i in picks if i is not None)
+    return chosen or tuple(o.id for o in options[:2])
 
 
 class CustomRotation:
