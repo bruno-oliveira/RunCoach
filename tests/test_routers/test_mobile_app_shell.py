@@ -133,7 +133,7 @@ class TestAppShellMarkup:
 
     @pytest.mark.parametrize(
         "path",
-        ["/my-plans", "/plan/42"],
+        ["/my-plans", "/plan/42", "/plans/custom/new"],
     )
     def test_plan_surfaces_highlight_the_plans_tab(self, signed_in_user, path):
         bar = _render_tab_bar(user=signed_in_user, path=path)

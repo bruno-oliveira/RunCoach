@@ -36,6 +36,13 @@
     color: var(--color-text-secondary);
 }
 
+.header .header-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
 .header .back-link {
     position: relative;
     display: inline-flex;
