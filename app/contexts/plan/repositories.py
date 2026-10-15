@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
@@ -129,7 +130,27 @@ class SQLAlchemyPlanRepository:
             filters.append(TrainingPlan.goal_time == request.goal_time)
         else:
             filters.append(TrainingPlan.goal_time.is_(None))
-        return self.session.query(TrainingPlan).filter(*filters).first()
+        # A custom plan is identified by its choices too: the same basics with
+        # different sessions is a different plan, and a generated plan is never
+        # the answer to a custom request (or the reverse). JSON equality is not
+        # portable SQL, so the choices are compared here.
+        if request.custom_spec is None:
+            filters.append(TrainingPlan.custom_spec.is_(None))
+            return self.session.query(TrainingPlan).filter(*filters).first()
+        filters.append(TrainingPlan.custom_spec.isnot(None))
+        for plan in self.session.query(TrainingPlan).filter(*filters):
+            if plan.custom_spec == request.custom_spec:
+                return plan
+        return None
+
+    def next_custom_index(self, user_id: str) -> int:
+        """The N for this runner's next "Custom Plan N" — never a reused one."""
+        highest = (
+            self.session.query(func.max(TrainingPlan.custom_index))
+            .filter(TrainingPlan.user_id == user_id)
+            .scalar()
+        )
+        return int(highest or 0) + 1
 
     def save(self, plan: TrainingPlan) -> None:
         self.session.add(plan)

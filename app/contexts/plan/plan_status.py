@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Iterable, Optional
 
+from app.contexts.plan.plan_type_registry import custom_plan_title
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
 from app.core.training.periodization.plan_calendar import (
     compute_current_week,
@@ -40,6 +41,8 @@ class PlanStatus:
     label: Optional[str]
     distance_display: str
     experience_level: str
+    # "Custom Plan N · <distance>" for a custom plan; None for a generated one.
+    custom_title: Optional[str] = None
 
     @property
     def completed(self) -> bool:
@@ -62,6 +65,7 @@ def plan_status(plan: TrainingPlan, today: date) -> PlanStatus:
             label=None,
             distance_display=distance_display,
             experience_level=experience_level,
+            custom_title=custom_plan_title(plan),
         )
 
     sd = plan.start_date
@@ -90,6 +94,7 @@ def plan_status(plan: TrainingPlan, today: date) -> PlanStatus:
         label=label,
         distance_display=distance_display,
         experience_level=experience_level,
+        custom_title=custom_plan_title(plan),
     )
 
 

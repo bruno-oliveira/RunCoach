@@ -50,6 +50,7 @@ _SESSION_PAYLOAD_KEYS = (
     "target_pace",
     "target_pace_formatted",
     "fixed_structure",
+    "long_shape_id",
 )
 
 

@@ -1,5 +1,6 @@
 """Plan generation and customization endpoints."""
 
+import json
 import logging
 from datetime import date, datetime
 from typing import Optional
@@ -126,14 +127,29 @@ def _plan_request_from_form(
     recent_race_distance_km: Optional[str],
     recent_race_time: Optional[str],
     goal_time: Optional[str],
+    custom_spec: Optional[str] = None,
 ) -> "PlanRequest | Response":
     """Coerce distance-mode form fields into a validated ``PlanRequest``.
+
+    ``custom_spec`` is the custom-plan builder's choices as JSON
+    (``CustomPlanSpec.to_json``); absent for every other plan.
 
     Returns an :class:`error_response` (a ``Response``) on any parse or
     validation failure so the caller can short-circuit; otherwise the built
     ``PlanRequest``.
     """
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
+    custom_spec_raw = None
+    if custom_spec:
+        try:
+            custom_spec_raw = json.loads(custom_spec)
+        except ValueError:
+            return error_response(
+                request,
+                current_user,
+                "The chosen sessions could not be read.",
+                "validation",
+            )
     is_trail_flag = _is_truthy(is_trail)
     is_backyard_flag = _is_truthy(is_backyard)
     intensive_weekend_flag = _is_truthy(intensive_weekend)
@@ -267,6 +283,7 @@ def _plan_request_from_form(
         recent_race_distance_km=race_dist,
         recent_race_time=recent_race_time,
         goal_time=goal_time,
+        custom_spec=custom_spec_raw,
     )
 
 
@@ -291,6 +308,7 @@ def _build_plan_request(
     recent_race_distance_km: Optional[float],
     recent_race_time: Optional[str],
     goal_time: Optional[str],
+    custom_spec: Optional[dict] = None,
 ) -> "PlanRequest | Response":
     """Build the ``PlanRequest``, mapping every domain error to a page response.
 
@@ -313,6 +331,8 @@ def _build_plan_request(
         "recent_race_time": recent_race_time or None,
         "goal_time": goal_time or None,
     }
+    if custom_spec is not None:
+        kwargs["custom_spec"] = custom_spec
     if is_backyard:
         kwargs.update(
             is_backyard=True,
@@ -383,6 +403,7 @@ async def generate_plan(
     current_time: Optional[str] = Form(None),
     max_heart_rate: Optional[str] = Form(None),
     start_date: Optional[str] = Form(None),
+    custom_spec: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -441,6 +462,7 @@ async def generate_plan(
         recent_race_distance_km=recent_race_distance_km,
         recent_race_time=recent_race_time,
         goal_time=goal_time,
+        custom_spec=custom_spec,
     )
     if isinstance(plan_request, Response):
         return plan_request
@@ -492,6 +514,10 @@ async def generate_plan(
     except PlanGenerationException as e:
         db.rollback()
         return error_response(request, current_user, e.user_message, "plan_generation")
+    except ValidationException as e:
+        # A custom plan the resolved frequency can no longer hold.
+        db.rollback()
+        return error_response(request, current_user, e.user_message, "validation")
     except DatabaseException:
         db.rollback()
         return error_response(

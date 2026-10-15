@@ -15,12 +15,13 @@ plan builders and step maths, so it carries no back-reference to the adjusters
 that import it.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
 from app.core.training.physiology.personal_easy_band import with_personal_easy_band
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import workout_steps as _steps_mod
+from app.core.training.workouts.long_run_shapes import reshape_long_card
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
 
 _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
@@ -102,6 +103,34 @@ def rebuild_plain_quality(
     return authoritative
 
 
+def _rescale_plain_card(
+    pd_wo: Dict[str, Any],
+    wtype: str,
+    steps: List[Dict[str, Any]],
+    steps_km: float,
+    target: float,
+    day: int,
+    wk: Dict[str, Any],
+    pace_zones: Optional[Dict[str, Any]],
+) -> None:
+    """Scale a flexible card's steps onto ``target`` and refresh its prose."""
+    pd_wo["steps"] = _steps_mod.scale_steps(steps, target / steps_km)
+    # Performance log-only types (vo2max / race_pace / fartlek) have no
+    # day-level builder; their scaled steps stay authoritative and the
+    # existing prose is kept rather than rebuilt.
+    if wtype in WORKOUT_REGISTRY:
+        rebuilt = build_workout(
+            wtype,
+            day=day,
+            distance=target,
+            total_km=wk.get("total_km") or 0.0,
+            phase=wk.get("phase", "build"),
+            pace_zones=pace_zones,
+        )
+        if rebuilt.get("description"):
+            pd_wo["description"] = rebuilt["description"]
+
+
 def reconcile_plan_data_to_orm(
     weeks,
     workouts_by_week: Dict,
@@ -169,22 +198,12 @@ def reconcile_plan_data_to_orm(
             # several guards/adaptations compounded the drift — and refresh the
             # card prose (mirrors the main loop). Key workouts are excluded:
             # their steps are re-derived from `distance` at enrich time.
+            # A custom plan's chosen long run is re-laid whole instead.
             elif not is_key and steps_drift and target > 0:
-                pd_wo["steps"] = _steps_mod.scale_steps(steps, target / steps_km)
-                # Performance log-only types (vo2max / race_pace / fartlek) have
-                # no day-level builder; their scaled steps stay authoritative and
-                # the existing prose is kept rather than rebuilt.
-                if wtype in WORKOUT_REGISTRY:
-                    rebuilt = build_workout(
-                        wtype,
-                        day=day,
-                        distance=target,
-                        total_km=wk.get("total_km") or 0.0,
-                        phase=wk.get("phase", "build"),
-                        pace_zones=pace_zones,
+                if not reshape_long_card(pd_wo, target, pace_zones):
+                    _rescale_plain_card(
+                        pd_wo, wtype, steps, steps_km, target, day, wk, pace_zones
                     )
-                    if rebuilt.get("description"):
-                        pd_wo["description"] = rebuilt["description"]
             pd_wo["distance"] = workout.distance_km
         if week.week_number in pd_week:
             pd_week[week.week_number]["total_km"] = round(

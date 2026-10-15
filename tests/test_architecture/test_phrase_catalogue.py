@@ -145,6 +145,38 @@ def _plan_texts(node, key: str = ""):
         yield node
 
 
+def _sample_custom_plans():
+    from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+    from app.core.training.custom_plan import (
+        CustomPlanSpec,
+        StrengthChoice,
+        eligible_options,
+        slot_grid,
+    )
+
+    for runs, template in ((4, "climb_descent"), (5, "auto")):
+        for offset in (0, 3):
+            menus = {
+                phase: {
+                    slot: tuple(
+                        o.id
+                        for o in eligible_options(phase, slot, target_distance=21.1)
+                        if slot.value == "long" or o.id.startswith("ftm_")
+                    )[offset : offset + 3]
+                    or tuple(
+                        o.id
+                        for o in eligible_options(phase, slot, target_distance=21.1)
+                    )[:3]
+                    for slot in slots
+                }
+                for phase, slots in slot_grid(runs).items()
+            }
+            spec = CustomPlanSpec(menus=menus, strength=StrengthChoice(2, template))
+            yield TrainingPlanGenerator().generate_plan(
+                40, 21.1, 14, max_runs_per_week=runs, vdot=48, custom_spec=spec
+            )
+
+
 def _sample_plans():
     from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
     from app.core.training.profiles.backyard_profile import classify_backyard
@@ -166,6 +198,9 @@ def _sample_plans():
         trail_profile=classify_trail(50.0, 2500.0),
         intensive_weekend_enabled=True,
     )
+    # A custom plan: every long-run shape and Flat to Mountain session, and
+    # both strength templates, reach the scan.
+    yield from _sample_custom_plans()
     backyard = classify_backyard(24)
     yield generator().generate_plan(
         70,

@@ -204,6 +204,11 @@ _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
     "taper_5k10k_sharpener": 3.0,
     "taper_half_sharpener": 3.0,
     "taper_marathon_sharpener": 3.5,
+    # Flat to Mountain sessions: where their canonical rep sets fit.
+    "ftm_800s": 6.0,
+    "ftm_km_cutdowns": 5.5,
+    "ftm_broken_tempo": 5.0,
+    "ftm_hour_of_power": 7.0,
 }
 
 
@@ -228,9 +233,90 @@ _BACKYARD_ONLY_IDS = frozenset(
     }
 )
 
-# Every session the rotation must never surface on its own: both families are
-# installed by a post-pass that already knows which one it wants.
-_FORCE_ONLY_IDS = _ITW_ONLY_IDS | _BACKYARD_ONLY_IDS
+# Sessions added from the Flat to Mountain library for custom plans. They are
+# offered to a runner building their own plan but kept out of the automatic
+# rotation, so adding them changes no existing plan; graduating one into the
+# rotation is a deliberate, separate change.
+_CUSTOM_ONLY_IDS = frozenset(w["id"] for w in WORKOUTS if w.get("custom_only"))
+
+# Every session the rotation must never surface on its own: the first two
+# families are installed by a post-pass that already knows which one it wants,
+# the third only by a runner's own choice.
+_FORCE_ONLY_IDS = _ITW_ONLY_IDS | _BACKYARD_ONLY_IDS | _CUSTOM_ONLY_IDS
+
+# Never offered to a runner building a plan: a test effort, not training.
+_NOT_CUSTOM_IDS = frozenset({"time_trial_5k"})
+
+# Sessions rehearsing a specific race's pace: offered only for that race.
+_RACE_PACE_MARKERS = ("race_pace", "goal_pace", "_mp_", "marathon_mp")
+
+
+def fits_key_workout_budget(workout_id: str, budget_km: Optional[float]) -> bool:
+    """Whether a day's budget can hold this session's canonical reps.
+
+    The same floor the rotation applies (``_KEY_WORKOUT_MIN_BUDGET_KM``), for
+    callers that install a session by id: a km-rep session on a slot too small
+    for its reps would be rewritten past recognition.
+    """
+    return (budget_km or 0.0) >= _KEY_WORKOUT_MIN_BUDGET_KM.get(workout_id, 0.0)
+
+
+def _is_trail_entry(workout: Dict[str, Any]) -> bool:
+    return workout["id"].startswith("trail_") or workout["distances"] == [30.0]
+
+
+def custom_eligible_sessions(
+    phase: str,
+    workout_types: tuple,
+    *,
+    target_distance: float,
+    trail_profile=None,
+    terrain: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Catalog sessions a runner may choose for a custom plan's quality day.
+
+    Wider than the rotation's filter on purpose. The rotation matches the
+    race distance exactly because it is choosing *for* the runner; a runner
+    choosing for themselves may run 1 km repeats in a marathon build, since
+    every zone the catalog uses is read off the runner's own VDOT. Two things
+    stay gated: a race-pace rehearsal only for its own race, and trail
+    sessions (which assume trail terrain) only for trail plans, subject to
+    the same terrain and bracket rules the rotation applies.
+    """
+    is_trail = trail_profile is not None or is_trail_target(target_distance, None)
+    own_race = {
+        w["id"] for w in _trail_aware_distance_filter(target_distance, trail_profile)
+    }
+    out: List[Dict[str, Any]] = []
+    for w in _WORKOUTS:
+        if w["id"] in _ITW_ONLY_IDS | _BACKYARD_ONLY_IDS | _NOT_CUSTOM_IDS:
+            continue
+        if phase not in w["phases"] or w["type"] not in workout_types:
+            continue
+        if _is_trail_entry(w) and not w.get("custom_only"):
+            if not is_trail or w["id"] not in own_race:
+                continue
+        if any(m in w["id"] for m in _RACE_PACE_MARKERS) and w["id"] not in own_race:
+            continue
+        if trail_profile is not None and not _bracket_allowed(w, trail_profile.bracket):
+            continue
+        terrain_tags = w.get("terrain", ["any"])
+        flat = terrain == "flat" or (
+            terrain is None
+            and trail_profile
+            and trail_profile.elevation_class == "flat"
+        )
+        if (
+            is_trail
+            and flat
+            and "flat" not in terrain_tags
+            and "any" not in terrain_tags
+        ):
+            continue
+        if is_trail and not flat and terrain_tags == ["flat"]:
+            continue
+        out.append(w)
+    return out
 
 
 _BRACKET_RESTRICTIONS: Dict[str, list] = {

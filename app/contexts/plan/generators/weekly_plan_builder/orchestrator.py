@@ -43,6 +43,7 @@ from app.contexts.plan.generators.workout_scaler import (
     reclamp_quality_to_long_run,
     scale_down,
 )
+from app.core.training.custom_plan import CustomRotation
 from app.core.training.periodization import phase_calculator
 from app.core.training.periodization import workout_distribution as workout_dist_mod
 from app.core.training.periodization.training_constants import (
@@ -241,6 +242,7 @@ def build_weekly_plan(
     backyard_profile=None,
     backyard_schedule: Optional[Dict[int, Any]] = None,
     composer: Optional[FrequencyComposer] = None,
+    custom_rotation: Optional[CustomRotation] = None,
 ) -> Dict[str, Any]:
     """Generate a single week's training plan.
 
@@ -295,6 +297,7 @@ def build_weekly_plan(
         is_backyard=backyard_profile is not None,
         rotation_state=rotation_state,
         composer=composer,
+        custom_rotation=custom_rotation,
     )
 
     backyard = None

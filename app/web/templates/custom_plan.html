@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Build your own plan{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/custom-plan.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cp-page">
+    <div class="container">
+        <div class="cp-header">
+            <h1 class="cp-title">Build your own plan</h1>
+            <p class="cp-subtitle">Choose the sessions that fill your week. We still size every run, set the paces from your fitness, schedule the recovery weeks and the taper, and adapt the plan to what you actually run.</p>
+        </div>
+
+        <form method="post" action="/generate-plan" class="cp-form" id="customPlanForm" novalidate>
+            <input type="hidden" name="custom_spec" id="cpSpec">
+            <input type="hidden" name="is_trail" id="cpIsTrail" value="">
+
+            <section class="cp-card">
+                <h2 class="cp-step">1 · Your goal</h2>
+                <div class="cp-fields">
+                    <label class="cp-field">
+                        <span class="form-label">Race distance</span>
+                        <select name="target_distance" id="cpDistance" class="form-input">
+                            {% for km, name in road_distances %}
+                            <option value="{{ km }}"{% if km == 21.1 %} selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                            <option value="trail">Trail</option>
+                        </select>
+                    </label>
+                    <label class="cp-field cp-trail" hidden>
+                        <span class="form-label">Trail distance (km)</span>
+                        <input type="number" name="trail_distance_km" id="cpTrailKm" class="form-input" min="8" max="163" step="0.1" value="30">
+                    </label>
+                    <label class="cp-field cp-trail" hidden>
+                        <span class="form-label">Elevation gain (m)</span>
+                        <input type="number" name="target_elevation_gain_m" id="cpGain" class="form-input" min="0" max="10000" step="10" value="1000">
+                    </label>
+                    <label class="cp-field cp-trail" hidden>
+                        <span class="form-label">Where you train</span>
+                        <select name="training_terrain" id="cpTerrain" class="form-input">
+                            <option value="flat">Flat</option>
+                            <option value="rolling">Rolling</option>
+                            <option value="hilly">Hilly</option>
+                            <option value="mountainous">Mountainous</option>
+                        </select>
+                    </label>
+                    <label class="cp-field">
+                        <span class="form-label">Current weekly distance (km)</span>
+                        <input type="number" name="current_km" id="cpCurrentKm" class="form-input" min="1" max="200" step="1" value="30" required>
+                    </label>
+                    <label class="cp-field">
+                        <span class="form-label">Weeks</span>
+                        <input type="number" name="weeks" id="cpWeeks" class="form-input" min="4" max="40" step="1" value="14" required>
+                    </label>
+                    <label class="cp-field">
+                        <span class="form-label">Runs per week</span>
+                        <select name="max_runs_per_week" id="cpRuns" class="form-input">
+                            {% for n in (3, 4, 5, 6) %}
+                            <option value="{{ n }}"{% if n == 4 %} selected{% endif %}>{{ n }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="cp-field">
+                        <span class="form-label">Start date</span>
+                        <input type="date" name="start_date" id="cpStart" class="form-input">
+                    </label>
+                </div>
+                <details class="cp-optional">
+                    <summary>Recent race (sets your paces)</summary>
+                    <div class="cp-fields">
+                        <label class="cp-field">
+                            <span class="form-label">Race distance (km)</span>
+                            <input type="number" name="recent_race_distance_km" id="cpRaceKm" class="form-input" min="1" max="100" step="0.1">
+                        </label>
+                        <label class="cp-field">
+                            <span class="form-label">Finish time</span>
+                            <input type="text" name="recent_race_time" id="cpRaceTime" class="form-input" placeholder="25:30">
+                        </label>
+                    </div>
+                </details>
+            </section>
+
+            <section class="cp-card">
+                <h2 class="cp-step">2 · Your sessions</h2>
+                <p class="cp-hint">Pick one to three sessions for each slot. We rotate through them week by week, in the order you pick them. Base weeks build volume, so they only ask about the long run; the taper is always ours.</p>
+                <div id="cpGrid" class="cp-grid" aria-live="polite">
+                    <p class="cp-loading">Loading sessions…</p>
+                </div>
+            </section>
+
+            <section class="cp-card">
+                <h2 class="cp-step">3 · Strength</h2>
+                <div class="cp-fields">
+                    <fieldset class="cp-field">
+                        <legend class="form-label">Sessions per week</legend>
+                        <div class="cp-choices">
+                            {% for n in (0, 1, 2) %}
+                            <label class="cp-choice"><input type="radio" name="cp_strength_count" value="{{ n }}"{% if n == 2 %} checked{% endif %}> <span>{{ n }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <fieldset class="cp-field">
+                        <legend class="form-label">Kind</legend>
+                        <div class="cp-choices">
+                            <label class="cp-choice"><input type="radio" name="cp_strength_template" value="climb_descent" checked> <span>Climb + Descent</span></label>
+                            <label class="cp-choice"><input type="radio" name="cp_strength_template" value="auto"> <span>Mixed (our rotation)</span></label>
+                        </div>
+                    </fieldset>
+                </div>
+                <p class="cp-hint">Climb is heavy and slow (squats, step-ups, calf raises); Descent is eccentric and springy (slow lowerings, step-downs, jumps). Strength goes on easy days, never the day before a long run in peak weeks.</p>
+            </section>
+
+            <section class="cp-card">
+                <h2 class="cp-step">4 · Check and create</h2>
+                <div id="cpProblems" class="cp-problems" role="alert" hidden></div>
+                <div id="cpPreview" class="cp-preview" hidden></div>
+                <div class="cp-actions">
+                    <button type="button" class="btn btn-secondary" id="cpPreviewBtn">Preview plan</button>
+                    <button type="submit" class="btn btn-primary" id="cpSubmit">Create custom plan</button>
+                </div>
+            </section>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ static_url('js/custom_plan.js') }}" defer></script>
+{% endblock %}
