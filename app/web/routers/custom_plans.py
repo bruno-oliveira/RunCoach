@@ -76,6 +76,7 @@ def custom_plan_options(
     is_trail: bool = Query(False),
     target_elevation_gain_m: Optional[float] = Query(None, ge=0, le=10000),
     training_terrain: Optional[str] = Query(None),
+    weeks: Optional[int] = Query(None, ge=1, le=52),
 ):
     """Every cell of the grid for this goal and frequency, with its options."""
     return builder_options(
@@ -84,6 +85,7 @@ def custom_plan_options(
         is_trail=is_trail,
         target_elevation_gain_m=target_elevation_gain_m,
         training_terrain=training_terrain,
+        weeks=weeks,
     )
 
 

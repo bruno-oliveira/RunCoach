@@ -12,15 +12,21 @@ import pytest
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.core.training.custom_plan import (
+    MAX_SESSIONS_PER_CELL,
     CustomPlanSpec,
     CustomRotation,
     SlotKind,
     StrengthChoice,
+    cell_limits,
     default_spec,
     eligible_options,
     rewrite_distribution,
     slot_grid,
     validate_spec,
+)
+from app.core.training.periodization.phase_calculator import (
+    calculate_phases,
+    recovery_week_set,
 )
 from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.workouts.key_workout_library import KeyWorkoutLibrary
@@ -87,6 +93,77 @@ def test_default_spec_is_valid_for_every_goal_and_frequency():
             )
 
 
+def test_a_cell_holds_one_choice_per_week_its_phase_fills():
+    # A choice past the phase's training weeks would never come round, so the
+    # limit is those weeks — recovery weeks install no choice — capped at five.
+    for weeks in (8, 12, 16, 20, 24):
+        phases = calculate_phases(weeks, 21.1)
+        recovery = recovery_week_set(phases)
+        limits = cell_limits(weeks, target_distance=21.1)
+        start = 1
+        for phase in ("base", "build", "peak"):
+            span = range(start, start + phases[phase])
+            loading = sum(1 for w in span if w not in recovery)
+            assert limits[phase] == max(1, min(MAX_SESSIONS_PER_CELL, loading))
+            start += phases[phase]
+    assert max(cell_limits(24, target_distance=42.2).values()) == 5
+    assert cell_limits(None, target_distance=10.0) == {
+        "base": 5,
+        "build": 5,
+        "peak": 5,
+    }
+
+
+def test_a_long_plan_takes_five_choices_and_a_short_one_refuses_them():
+    long_run_shapes = [
+        o.id for o in eligible_options("build", SlotKind.LONG, target_distance=42.2)
+    ]
+    assert len(long_run_shapes) >= 5
+    base = default_spec(4, target_distance=42.2)
+    menus = {phase: dict(cells) for phase, cells in base.menus.items()}
+    menus["build"][SlotKind.LONG] = tuple(long_run_shapes[:5])
+    spec = CustomPlanSpec(menus=menus)
+    assert cell_limits(24, target_distance=42.2)["build"] == 5
+    assert not validate_spec(spec, runs_per_week=4, target_distance=42.2, weeks=24)
+    short = validate_spec(spec, runs_per_week=4, target_distance=42.2, weeks=8)
+    too_many = [p for p in short if p.key == "too_many_sessions"]
+    assert too_many and too_many[0].phase == "build"
+    assert too_many[0].limit == cell_limits(8, target_distance=42.2)["build"]
+
+
+def test_default_spec_fits_every_plan_length():
+    for _label, _km, dist, _weeks, trail in MATRIX:
+        tp = classify_trail(*trail) if trail else None
+        for weeks in (6, 8, 10, 14, 20):
+            for runs in (3, 4, 5, 6):
+                spec = default_spec(
+                    runs, target_distance=dist, trail_profile=tp, weeks=weeks
+                )
+                assert not validate_spec(
+                    spec,
+                    runs_per_week=runs,
+                    target_distance=dist,
+                    trail_profile=tp,
+                    weeks=weeks,
+                ), (dist, weeks, runs)
+
+
+def test_a_single_quality_day_starts_on_two_kinds_of_session():
+    # The catalog's first two are both VO2max work; a half marathoner's
+    # default would have had no tempo at all.
+    def kinds(dist):
+        ids = default_spec(4, target_distance=dist).menu("build", SlotKind.QUALITY)
+        types = {
+            o.id: o.workout_type
+            for o in eligible_options("build", SlotKind.QUALITY, target_distance=dist)
+        }
+        return [types[i] for i in ids]
+
+    assert kinds(21.1) == ["tempo", "interval"]
+    assert kinds(42.2) == ["tempo", "interval"]
+    assert kinds(5.0) == ["interval", "tempo"]
+
+
 def _problem_keys(spec, runs=5, dist=21.1):
     return {
         p.key for p in validate_spec(spec, runs_per_week=runs, target_distance=dist)
@@ -103,7 +180,8 @@ def test_validation_names_each_problem():
     assert "empty_cell" in _problem_keys(CustomPlanSpec(menus=empty))
 
     crowded = dict(
-        menus, build={**menus["build"], SlotKind.SPEED: ("a", "b", "c", "d")}
+        menus,
+        build={**menus["build"], SlotKind.SPEED: ("a", "b", "c", "d", "e", "f")},
     )
     assert "too_many_sessions" in _problem_keys(CustomPlanSpec(menus=crowded))
 

@@ -21,7 +21,6 @@
  "Recent race (sets your paces)": "Prova recente (define os seus ritmos)",
  "Race distance (km)": "Distância da prova (km)",
  "Finish time": "Tempo final",
- "Pick one to three sessions for each slot. We rotate through them week by week, in the order you pick them. Base weeks build volume, so they only ask about the long run; the taper is always ours.": "Escolha de um a três treinos para cada espaço. Vamos alternando entre eles semana a semana, pela ordem em que os escolheu. As semanas de base constroem volume, por isso só pedem o treino longo; o afinamento é sempre nosso.",
  "Loading sessions…": "A carregar treinos…",
  "Sessions per week": "Sessões por semana",
  "Kind": "Tipo",
@@ -43,7 +42,6 @@
  "Phase": "Fase",
  "Sessions": "Treinos",
  "Pick at least one session for this slot.": "Escolha pelo menos um treino para este espaço.",
- "Pick at most three sessions for this slot.": "Escolha no máximo três treinos para este espaço.",
  "A session is picked twice in this slot.": "Há um treino escolhido duas vezes neste espaço.",
  "One of these sessions doesn't fit this goal any more.": "Um destes treinos já não se adequa a este objetivo.",
  "Custom plans need at least 3 runs a week.": "Os planos personalizados precisam de pelo menos 3 corridas por semana.",
@@ -59,5 +57,10 @@
  "A custom plan needs an existing running base and a road or trail goal.": "Um plano personalizado precisa de uma base de corrida e de um objetivo de estrada ou trail.",
  "A custom plan needs at least {n:n} runs a week.": "Um plano personalizado precisa de pelo menos {n} corridas por semana.",
  "Some of the chosen sessions don't fit this plan.": "Alguns dos treinos escolhidos não se adequam a este plano.",
- "Check the highlighted choices and try again.": "Verifique as escolhas assinaladas e tente de novo."
+ "Check the highlighted choices and try again.": "Verifique as escolhas assinaladas e tente de novo.",
+ "Pick one or more sessions for each slot — up to one for every training week in that phase, five at most. We rotate through them week by week, in the order you pick them. Base weeks build volume, so they only ask about the long run; the taper is always ours.": "Escolha um ou mais treinos para cada espaço — até um por cada semana de treino dessa fase, cinco no máximo. Vamos alternando entre eles semana a semana, pela ordem em que os escolheu. As semanas de base constroem volume, por isso só pedem o treino longo; o afinamento é sempre nosso.",
+ "This slot has more sessions than its phase has training weeks to fit them.": "Este espaço tem mais treinos do que semanas de treino na sua fase para os encaixar.",
+ "Building preview…": "A preparar a pré-visualização…",
+ "Too many previews in a row. Wait a minute and try again.": "Demasiadas pré-visualizações seguidas. Aguarde um minuto e tente de novo.",
+ "Full Body": "Corpo inteiro"
 }

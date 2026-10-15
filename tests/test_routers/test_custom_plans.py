@@ -69,6 +69,36 @@ def test_options_follow_the_frequency(client):
     assert five["defaults"]["menus"]["build"]["speed"]
 
 
+def test_options_bound_each_cell_by_the_plan_length(client):
+    def limits(weeks):
+        data = client.get(
+            "/api/custom-plans/options",
+            params={"target_distance": 42.2, "max_runs_per_week": 4, "weeks": weeks},
+        ).json()
+        for cell in data["cells"]:
+            assert (
+                len(data["defaults"]["menus"][cell["phase"]][cell["slot"]])
+                <= (cell["limit"])
+            )
+        return {(c["phase"], c["slot"]): c["limit"] for c in data["cells"]}
+
+    long_plan, short_plan = limits(24), limits(8)
+    assert long_plan[("build", "long")] == 5
+    assert short_plan[("build", "long")] < 5
+
+
+def test_preview_names_the_strength_sessions(client):
+    spec = _spec()
+    spec["strength"] = {"sessions_per_week": 2, "template": "climb_descent"}
+    weeks = client.post(
+        "/api/custom-plans/preview",
+        json=_basics(custom_spec=spec),
+        headers=ORIGIN,
+    ).json()["weeks"]
+    labels = {d["strength"] for w in weeks for d in w["days"] if d["strength"]}
+    assert labels == {"Climb", "Descent"}
+
+
 def test_options_refuse_fewer_than_three_runs(client):
     response = client.get(
         "/api/custom-plans/options",

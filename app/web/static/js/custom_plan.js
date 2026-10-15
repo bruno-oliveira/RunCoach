@@ -11,15 +11,23 @@
   var form = document.getElementById('customPlanForm');
   if (!form) return;
 
-  var MAX_PER_CELL = 3;
+  var MAX_PER_CELL = 5;
   var grid = document.getElementById('cpGrid');
   var problemsBox = document.getElementById('cpProblems');
   var previewBox = document.getElementById('cpPreview');
   var previewBtn = document.getElementById('cpPreviewBtn');
   var distance = document.getElementById('cpDistance');
   var runs = document.getElementById('cpRuns');
+  var weeks = document.getElementById('cpWeeks');
   var isTrail = document.getElementById('cpIsTrail');
   var trailFields = form.querySelectorAll('.cp-trail');
+
+  // What a day without a named session is called in the preview (quality
+  // days always carry the session's own name).
+  var DAY_TYPES = {
+    easy: 'Easy run',
+    long: 'Long run'
+  };
 
   // phase -> slot -> [ids in pick order]
   var picks = {};
@@ -28,7 +36,7 @@
 
   var PROBLEMS = {
     empty_cell: 'Pick at least one session for this slot.',
-    too_many_sessions: 'Pick at most three sessions for this slot.',
+    too_many_sessions: 'This slot has more sessions than its phase has training weeks to fit them.',
     duplicate_session: 'A session is picked twice in this slot.',
     ineligible_session: "One of these sessions doesn't fit this goal any more.",
     too_few_runs: 'Custom plans need at least 3 runs a week.'
@@ -59,6 +67,8 @@
       max_runs_per_week: runs.value,
       is_trail: trail() ? 'true' : 'false'
     });
+    var w = parseInt(weeks.value, 10);
+    if (w > 0) params.set('weeks', String(w));
     if (trail()) {
       params.set('target_elevation_gain_m', form.target_elevation_gain_m.value || '0');
       params.set('training_terrain', form.training_terrain.value);
@@ -78,6 +88,10 @@
     return picks[cell.phase][cell.slot] || (picks[cell.phase][cell.slot] = []);
   }
 
+  function limitOf(cell) {
+    return cell.limit || MAX_PER_CELL;
+  }
+
   function renderCell(cell) {
     var box = el('fieldset', 'cp-cell');
     box.dataset.phase = cell.phase;
@@ -86,9 +100,13 @@
     legend.appendChild(el('span', 'cp-cell-phase', cell.phase_label));
     legend.appendChild(document.createTextNode(' · '));
     legend.appendChild(el('span', null, cell.slot_label));
+    // "2 / 4": picked so far, and how many this phase has weeks for.
+    var count = el('span', 'cp-cell-count');
+    legend.appendChild(count);
     box.appendChild(legend);
 
     var chosen = cellPicks(cell);
+    var limit = limitOf(cell);
     var list = el('div', 'cp-options');
     cell.options.forEach(function (option) {
       optionNames[option.id] = option.name;
@@ -108,7 +126,7 @@
       input.addEventListener('change', function () {
         var at = chosen.indexOf(option.id);
         if (input.checked && at === -1) {
-          if (chosen.length >= MAX_PER_CELL) {
+          if (chosen.length >= limit) {
             input.checked = false;
             return;
           }
@@ -116,24 +134,28 @@
         } else if (!input.checked && at !== -1) {
           chosen.splice(at, 1);
         }
-        markOrder(list, chosen);
+        markOrder(list, chosen, limit, count);
         previewBox.hidden = true;
       });
       list.appendChild(label);
     });
     box.appendChild(list);
-    markOrder(list, chosen);
+    markOrder(list, chosen, limit, count);
     return box;
   }
 
   // The rotation follows pick order, so each picked card shows its turn.
-  function markOrder(list, chosen) {
+  // A full cell dims the cards it can no longer take.
+  function markOrder(list, chosen, limit, count) {
+    var full = chosen.length >= limit;
     list.querySelectorAll('.cp-option').forEach(function (label) {
       var id = label.querySelector('input').value;
       var turn = chosen.indexOf(id);
       label.classList.toggle('cp-option--picked', turn !== -1);
+      label.classList.toggle('cp-option--locked', full && turn === -1);
       label.querySelector('.cp-option-order').textContent = turn === -1 ? '' : String(turn + 1);
     });
+    count.textContent = chosen.length + ' / ' + limit;
   }
 
   function loadOptions() {
@@ -152,7 +174,9 @@
             return offered.indexOf(id) !== -1;
           });
           next[cell.phase] = next[cell.phase] || {};
-          next[cell.phase][cell.slot] = old.length ? old : ((defaults[cell.phase] || {})[cell.slot] || []).slice();
+          // A shorter plan can lower a cell's limit: keep the earliest picks.
+          next[cell.phase][cell.slot] = (old.length ? old : ((defaults[cell.phase] || {})[cell.slot] || []).slice())
+            .slice(0, limitOf(cell));
         });
         picks = next;
         grid.textContent = '';
@@ -196,6 +220,7 @@
       if (PROBLEMS[p.key]) problemsBox.appendChild(el('p', 'cp-problem', PROBLEMS[p.key]));
     });
     problemsBox.hidden = false;
+    reveal(problemsBox);
   }
 
   function requestBody() {
@@ -233,21 +258,37 @@
       week.days.forEach(function (day) {
         if (!day.name && day.type === 'easy' && !day.strength) return;
         var chip = el('span', 'cp-chip cp-chip--' + day.type);
-        chip.textContent = (day.name || day.type) + ' · ' + day.distance + ' km';
+        chip.textContent = (day.name || DAY_TYPES[day.type] || day.type) + ' · ' + day.distance + ' km';
         if (day.deferral_code) chip.title = 'Your choices need more room than this day has, so it keeps our session.';
         sessions.appendChild(chip);
-        if (day.strength) sessions.appendChild(el('span', 'cp-chip cp-chip--strength', day.strength));
+        if (day.strength) {
+          // The name alone in its own text node, so it translates.
+          var strength = el('span', 'cp-chip cp-chip--strength', '+ ');
+          strength.appendChild(document.createTextNode(day.strength));
+          sessions.appendChild(strength);
+        }
       });
       row.appendChild(sessions);
       table.appendChild(row);
     });
     previewBox.appendChild(table);
     previewBox.hidden = false;
+    reveal(previewBox);
+  }
+
+  // The preview and the problems render at the foot of a long page, out of
+  // sight of a runner who has just picked their sessions: bring them in.
+  function reveal(node) {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    node.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }
 
   function runPreview() {
     problemsBox.hidden = true;
     previewBtn.disabled = true;
+    previewBtn.setAttribute('aria-busy', 'true');
+    var idle = previewBtn.textContent;
+    previewBtn.textContent = 'Building preview…';
     fetch('/api/custom-plans/preview', {
       method: 'POST',
       credentials: 'same-origin',
@@ -255,20 +296,29 @@
       body: JSON.stringify(requestBody())
     })
       .then(function (r) {
-        return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+        // A rate limit or a server error may not answer JSON.
+        return r.json()
+          .catch(function () { return {}; })
+          .then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
       })
       .then(function (res) {
         if (res.ok) renderPreview(res.data);
+        else if (res.status === 429) showProblems('Too many previews in a row. Wait a minute and try again.');
         else showProblems(res.data.message || 'Check your choices and try again.', res.data.problems);
       })
       .catch(function () {
         showProblems("We couldn't build the preview. Try again in a moment.");
       })
-      .finally(function () { previewBtn.disabled = false; });
+      .finally(function () {
+        previewBtn.disabled = false;
+        previewBtn.removeAttribute('aria-busy');
+        previewBtn.textContent = idle;
+      });
   }
 
   distance.addEventListener('change', function () { syncTrail(); loadOptions(); });
   runs.addEventListener('change', loadOptions);
+  weeks.addEventListener('change', loadOptions);
   ['trail_distance_km', 'target_elevation_gain_m', 'training_terrain'].forEach(function (name) {
     form[name].addEventListener('change', loadOptions);
   });

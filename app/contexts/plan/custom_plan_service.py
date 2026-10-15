@@ -16,6 +16,7 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.custom_plan import (
     CUSTOM_PHASES,
     Problem,
+    cell_limits,
     default_spec,
     eligible_options,
     slot_grid,
@@ -45,14 +46,22 @@ def builder_options(
     is_trail: bool = False,
     target_elevation_gain_m: Optional[float] = None,
     training_terrain: Optional[str] = None,
+    weeks: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """The grid for this goal and frequency, each cell's options, and defaults."""
+    """The grid for this goal and frequency, each cell's options, and defaults.
+
+    With ``weeks``, each cell also says how many choices it may hold
+    (``limit``): one per week its phase fills, so none is chosen in vain.
+    """
     trail_profile = _trail_profile(is_trail, target_distance, target_elevation_gain_m)
     terrain = training_terrain or (
         trail_profile.elevation_class if trail_profile is not None else None
     )
     runs = max(3, min(6, runs_per_week))
     grid = slot_grid(runs)
+    limits = cell_limits(
+        weeks, target_distance=target_distance, trail_profile=trail_profile
+    )
     cells: List[Dict[str, Any]] = []
     for phase in CUSTOM_PHASES:
         for slot in grid[phase]:
@@ -69,6 +78,7 @@ def builder_options(
                     "phase_label": PHASE_LABELS[phase],
                     "slot": slot.value,
                     "slot_label": SLOT_LABELS[slot.value],
+                    "limit": limits[phase],
                     "options": [
                         {
                             "id": o.id,
@@ -87,6 +97,7 @@ def builder_options(
         target_distance=target_distance,
         trail_profile=trail_profile,
         terrain=terrain,
+        weeks=weeks,
     )
     return {"runs_per_week": runs, "cells": cells, "defaults": defaults.to_json()}
 
@@ -105,6 +116,13 @@ def problems_json(problems: List[Problem]) -> List[Dict[str, Any]]:
     ]
 
 
+def _strength_label(day: Dict[str, Any]) -> Optional[str]:
+    """ "Climb", "Lower Body"… — the name the plan page gives the session."""
+    session = day.get("strength_session") or {}
+    focus = session.get("focus") or session.get("type")
+    return str(focus).replace("_", " ").title() if focus else None
+
+
 def _day_summary(day: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "day": day.get("day"),
@@ -112,7 +130,7 @@ def _day_summary(day: Dict[str, Any]) -> Dict[str, Any]:
         "name": day.get("key_workout_name"),
         "distance": day.get("distance"),
         "structure": day.get("structure"),
-        "strength": (day.get("strength_session") or {}).get("focus"),
+        "strength": _strength_label(day),
         "deferral_code": day.get("custom_deferral_code"),
     }
 
