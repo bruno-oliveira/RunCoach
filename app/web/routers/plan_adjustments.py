@@ -14,8 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.application.watch_sync_service import resync_plan_to_watch
-from app.contexts.plan.adaptation import AdaptationService, type_swapper
-from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
+from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.week_adjustment_service import (
     apply_week_action,
     swap_week_days,
@@ -132,18 +131,6 @@ def get_plan_gaps(
         }
 
     return {"available": True, **gaps}
-
-
-@router.get("/api/plan/{plan_id}/missed-weeks")
-def get_missed_weeks(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Detect fully missed weeks (0 runs logged)."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    missed = detect_missed_weeks(plan_id, current_user.id, db)
-    return {"missed_weeks": missed, "count": len(missed)}
 
 
 # ---------------------------------------------------------------------------
@@ -343,50 +330,6 @@ def override_plan_week(
         "week": week_number,
         **payload,
     }
-
-
-# ---------------------------------------------------------------------------
-# Type swap (coach-suggested workout type substitution)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/api/plan/{plan_id}/swap-proposals")
-def get_swap_proposals(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get coach-suggested workout type swap proposals based on run patterns."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    proposals = type_swapper.get_swap_proposals(plan_id, current_user.id, db)
-    return {"proposals": proposals}
-
-
-class SwapTypeRequest(BaseModel):
-    workout_id: str
-    to_type: str
-
-
-@router.post("/api/plan/{plan_id}/swap-type")
-def apply_type_swap(
-    plan_id: str,
-    body: SwapTypeRequest,
-    background_tasks: BackgroundTasks,
-    if_match: str | None = Header(default=None, alias="If-Match"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    intervals_service=Depends(get_intervals_service),
-):
-    """Apply an accepted workout type swap to a specific workout."""
-    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    _check_revision(training_plan, if_match)
-    result = type_swapper.apply_swap(
-        body.workout_id, plan_id, current_user.id, body.to_type, db
-    )
-    if result is None:
-        raise HTTPException(status_code=404, detail="Workout not found")
-    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
-    return result
 
 
 # ---------------------------------------------------------------------------

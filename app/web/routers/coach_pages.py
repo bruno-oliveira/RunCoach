@@ -29,7 +29,6 @@ def coach_page(
         {
             "request": request,
             "user": current_user,
-            "current_page": "coach",
             "google_client_id": settings.google_client_id,
             "page": build_coach_page(current_user, db, local_today()),
         },

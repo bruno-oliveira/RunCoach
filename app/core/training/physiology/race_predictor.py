@@ -200,6 +200,28 @@ def predict_time_for_distance(
     return int(round(total_seconds))
 
 
+def vdot_needed_for(
+    distance_km: float, goal_seconds: float, calibration_factor: float = 1.0
+) -> Optional[float]:
+    """The lowest VDOT, to a tenth, whose calibrated prediction meets the goal.
+
+    ``calibration_factor`` is the runner's own raced-versus-predicted
+    correction (above 1 when they race slower than VDOT predicts) — the same
+    one the Coach page applies to its predicted time. Race readiness, the gap
+    analysis and the Coach page all ask "is the goal in reach?" through here,
+    so they cannot answer it differently.
+    """
+    if distance_km <= 0 or goal_seconds <= 0:
+        return None
+    target = goal_seconds / (calibration_factor or 1.0)
+    for tenths in range(250, 850):
+        vdot = tenths / 10.0
+        predicted = predict_time_for_distance(vdot, distance_km)
+        if predicted and predicted <= target:
+            return vdot
+    return None
+
+
 def get_confidence_range(
     vdot: float,
     distance_km: float,

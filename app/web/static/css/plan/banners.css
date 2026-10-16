@@ -190,7 +190,7 @@
     flex-shrink: 0;
 }
 
-.suggestion-actions .btn-small {
+.suggestion-actions .btn-sm {
     font-size: var(--text-xs);
     padding: 4px 12px;
 }

@@ -64,17 +64,9 @@
         <p class="plan-form-custom-link"><a href="/plans/custom/new">Prefer to pick your own sessions? Build your own plan</a></p>
 
         <form method="post" action="/generate-plan" class="plan-form{% if not user %} anon-plan-form{% endif %}" id="plan-form">
-            <!-- Plan mode toggle -->
-            <div class="mode-toggle-wrap">
-                <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
-                <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')"><span data-i18n="home.goal_distance">Distance Goal</span></button>
-                <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}><span data-i18n="home.goal_time">Time Goal</span></button>
-            </div>
-            <p class="mode-description" id="mode-description"><span data-i18n="home.goal_distance_desc">Build a structured plan to finish a race at a specific distance.</span></p>
-
             <!-- Shared: Weekly mileage (always visible) -->
             <div class="form-group">
-                <label for="current_km" class="form-label"><span data-i18n="home.weekly_mileage">Weekly mileage</span></label>
+                <label for="current_km" class="form-label"><span data-i18n="home.weekly_mileage">Running now</span></label>
                 <div class="input-with-unit">
                     <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
                     <span class="input-unit">km</span>
@@ -101,7 +93,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="weeks" class="form-label"><span data-i18n="home.duration">Duration</span></label>
+                        <label for="weeks" class="form-label"><span data-i18n="home.duration">Plan length</span></label>
                         <div class="input-with-unit">
                             <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="40" required placeholder="12">
                             <span class="input-unit" data-i18n="home.weeks">weeks</span>
@@ -276,7 +268,7 @@
                         <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                     <div id="goal-fields" class="form-collapsible-content" style="display:none;">
-                        <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
+                        <span class="form-help" style="margin-bottom: 8px; display:block;">Your plan tracks you against it. Until your runs show your fitness, sessions are paced off this goal.</span>
                         <div class="form-group">
                             <label for="goal_time" class="form-label"><span data-i18n="home.goal_finish_time">Goal finish time</span></label>
                             <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
@@ -285,74 +277,14 @@
                 </div>
             </div>
 
-            <!-- Time Goal mode fields (hidden by default) -->
-            <div id="time-mode-fields" style="display:none;">
-                <div class="form-row-2">
-                    <div class="form-group">
-                        <label for="target_distance_time" class="form-label">Race goal</label>
-                        <div class="select-wrap">
-                            <select id="target_distance_time" name="target_distance" class="form-select" required>
-                                <option value="">Select distance</option>
-                                <option value="5">5K</option>
-                                <option value="10">10K</option>
-                                <option value="21.1">Half Marathon</option>
-                                <option value="42.2">Marathon</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="weeks_time" class="form-label">Duration</label>
-                        <div class="input-with-unit">
-                            <input type="number" id="weeks_time" name="weeks" class="form-input" min="6" max="16" required placeholder="10">
-                            <span class="input-unit">weeks</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="max_runs_per_week_time" class="form-label">Runs per week</label>
-                    <div class="select-wrap">
-                        <select id="max_runs_per_week_time" name="max_runs_per_week" class="form-select" required>
-                            <option value="3">3 runs &mdash; Classic starter</option>
-                            <option value="4">4 runs</option>
-                            <option value="5" selected>5 runs &mdash; Recommended</option>
-                            <option value="6">6 runs &mdash; Serious training</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="goal_time_required" class="form-label">Goal finish time</label>
-                    <input type="text" id="goal_time_required" name="goal_time_required" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
-                    <span class="form-help">Your target race time &mdash; all workouts will be paced from this goal</span>
-                </div>
-
-                <div class="form-row-2">
-                    <div class="form-group">
-                        <label for="current_time" class="form-label"><span data-i18n="home.current_finish">Current finish time</span></label>
-                        <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
-                        <span class="form-help">Your current race time at this distance</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="max_heart_rate" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
-                        <div class="input-with-unit">
-                            <input type="number" id="max_heart_rate_time" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
-                            <span class="input-unit">bpm</span>
-                        </div>
-                        <span class="form-help">Enables heart rate zones</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Shared across both plan modes. Asked here rather than
+            <!-- Asked here rather than
                  from a banner after the fact: without a start date a
                  plan has no calendar at all — no "This Week", no run
                  mapping, no adaptation, and nothing to put on a watch. -->
             <div class="form-group">
                 <label for="start_date" class="form-label"><span data-i18n="home.start_date">Start date</span></label>
-                <input type="date" id="start_date" name="start_date" class="form-input" value="{{ next_monday() }}">
-                <span class="form-help" data-i18n="home.start_date_help">Week 1 begins here. You can move it later.</span>
+                {% with field_id = 'start_date', field_name = 'start_date', selected = none %}{% include 'components/start_week_select.html' %}{% endwith %}
+                <span class="form-help" data-i18n="home.start_date_help">Plans start on a Monday. You can move it later.</span>
             </div>
 
             <div id="long-run-hint" class="long-run-hint" role="status" aria-live="polite" style="display:none;">

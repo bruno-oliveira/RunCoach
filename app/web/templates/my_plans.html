@@ -13,8 +13,10 @@
         <h1><span data-i18n="myplans.title">My Training Plans</span></h1>
         <p class="plan-counter">{{ plan_count }} of {{ max_plans }} plans used</p>
         <div class="header-links">
-            <a href="/" class="back-link">&larr; Back to Home</a>
-            {% if plans %}<a href="/plans/custom/new" class="back-link">Build your own plan</a>{% endif %}
+            {% if plans %}
+            <a href="/#build-plan" class="back-link" data-i18n="home.back_start_another">Build another plan</a>
+            <a href="/plans/custom/new" class="back-link">Build your own plan</a>
+            {% endif %}
         </div>
     </div>
 
@@ -32,13 +34,6 @@
                 {% else %}
                 <span class="plan-badge badge-road" title="Road"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 L5 21 M16 3 L19 21 M12 5 v3 M12 11 v3 M12 17 v2"/></svg>Road</span>
                 {% endif %}
-                {% if plan.plan_type == 'performance' %}
-                <span class="plan-badge badge-performance">Performance</span>
-                {% elif plan.plan_type == 'fitness' %}
-                <span class="plan-badge badge-fitness">Fitness</span>
-                {% else %}
-                <span class="plan-badge badge-distance">Distance</span>
-                {% endif %}
                 <span class="tier-dot tier-dot-{{ status.experience_level }}" title="{{ status.experience_level | title }}"></span>
                 {% if plan.adjustment_multiplier %}
                 <span class="plan-badge badge-auto-adapted" title="Auto-adapted from your runs">
@@ -51,7 +46,7 @@
                     <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
                     <span class="plan-detail-value">{{ status.distance_display }}</span>
                 </div>
-                {% if plan.plan_type == 'performance' and plan.goal_time %}
+                {% if plan.goal_time %}
                 <div class="plan-detail-row">
                     <span class="plan-detail-label"><span data-i18n="myplans.goal_time">Goal Time:</span></span>
                     <span class="plan-detail-value">{{ plan.goal_time }}</span>
@@ -124,7 +119,7 @@
                     <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
                     <span class="plan-detail-value">{{ status.distance_display }}</span>
                 </div>
-                {% if plan.plan_type == 'performance' and plan.goal_time %}
+                {% if plan.goal_time %}
                 <div class="plan-detail-row">
                     <span class="plan-detail-label"><span data-i18n="myplans.goal_time">Goal Time:</span></span>
                     <span class="plan-detail-value">{{ plan.goal_time }}</span>
@@ -161,7 +156,7 @@
         <h2><span data-i18n="myplans.none_title">No plans yet</span></h2>
         <p><span data-i18n="myplans.none_desc">Create your first plan and it'll live here — every week and every workout in one place.</span></p>
         <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
-            <a href="/" class="btn btn-primary"><span data-i18n="myplans.create">Create a Running Plan</span></a>
+            <a href="/" class="btn btn-primary"><span data-i18n="myplans.create">Build my plan</span></a>
             <a href="/plans/custom/new" class="btn btn-secondary">Build your own plan</a>
         </div>
     </div>

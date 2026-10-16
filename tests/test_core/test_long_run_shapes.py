@@ -66,30 +66,3 @@ def test_surges_run_as_one_repeated_block():
         "Surge",
         "Easy between surges",
     ]
-
-
-def test_an_adjustment_keeps_the_shape_until_the_type_changes():
-    from app.contexts.plan.plan_adjustments import _regenerate
-
-    card = build_shaped_long_run("surge_long", 6, 18.0, PACE_ZONES)
-    assert card is not None
-    _regenerate(
-        card,
-        new_type=None,
-        new_distance=14.0,
-        phase="build",
-        total_km=50.0,
-        pace_zones=PACE_ZONES,
-    )
-    assert card["long_shape_id"] == "surge_long"
-    assert card["distance"] == 14.0
-    _regenerate(
-        card,
-        new_type="easy",
-        new_distance=8.0,
-        phase="build",
-        total_km=50.0,
-        pace_zones=PACE_ZONES,
-    )
-    assert "long_shape_id" not in card
-    assert card["type"] == "easy"

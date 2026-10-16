@@ -185,37 +185,12 @@ class SQLAlchemyPlanRepository:
             .first()
         )
 
-    def get_daily_workout(
-        self, weekly_plan_id: str, day_of_week: int
-    ) -> Optional[DailyWorkout]:
-        return (
-            self.session.query(DailyWorkout)
-            .filter(
-                DailyWorkout.weekly_plan_id == weekly_plan_id,
-                DailyWorkout.day_of_week == day_of_week,
-            )
-            .first()
-        )
-
     def list_daily_workouts(self, weekly_plan_id: str) -> List[DailyWorkout]:
         return (
             self.session.query(DailyWorkout)
             .filter(DailyWorkout.weekly_plan_id == weekly_plan_id)
             .all()
         )
-
-    def earliest_start_date(self, user_id: str):
-        """Earliest non-null start_date across a user's plans, or None."""
-        row = (
-            self.session.query(TrainingPlan.start_date)
-            .filter(
-                TrainingPlan.user_id == user_id,
-                TrainingPlan.start_date.isnot(None),
-            )
-            .order_by(TrainingPlan.start_date.asc())
-            .first()
-        )
-        return row[0] if row else None
 
 
 __all__ = ["SQLAlchemyPlanRepository"]

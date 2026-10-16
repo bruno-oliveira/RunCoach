@@ -157,32 +157,6 @@ class TestDbRetrieval:
         db.flush()
         return user, plan, runs
 
-    def test_get_feedback_for_run(self, db):
-        user, plan, runs = self._plan_and_runs(db)
-        fb = RunFeedback(
-            run_log_id=runs[0].id,
-            user_id=user.id,
-            pace_feedback="Nice pace",
-            overall_sentiment="positive",
-        )
-        db.add(fb)
-        db.commit()
-        found = FeedbackService.get_feedback_for_run(runs[0].id, db)
-        assert found is not None and found.pace_feedback == "Nice pace"
-        assert FeedbackService.get_feedback_for_run("missing", db) is None
-
-    def test_get_feedback_for_plan(self, db):
-        user, plan, runs = self._plan_and_runs(db)
-        for r in runs:
-            db.add(
-                RunFeedback(run_log_id=r.id, user_id=user.id, overall_sentiment="info")
-            )
-        db.commit()
-        result = FeedbackService.get_feedback_for_plan(plan.id, user.id, db)
-        assert len(result) == 2
-        # Unknown plan → empty.
-        assert FeedbackService.get_feedback_for_plan("x", user.id, db) == []
-
     def test_weekly_feedback_summary(self, db):
         user, plan, runs = self._plan_and_runs(db)
         for r in runs:

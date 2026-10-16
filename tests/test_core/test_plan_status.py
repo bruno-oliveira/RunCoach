@@ -16,7 +16,7 @@ from app.contexts.plan.plan_status import (
 )
 from app.models import TrainingPlan
 
-TODAY = date(2026, 3, 10)
+TODAY = date(2026, 3, 9)  # a Monday: plans start on Mondays
 
 
 def _plan(plan_id: str = "p1", **kwargs) -> TrainingPlan:
@@ -26,11 +26,11 @@ def _plan(plan_id: str = "p1", **kwargs) -> TrainingPlan:
 
 
 def test_a_plan_starting_in_the_future_has_not_started():
-    plan = _plan(start_date=datetime(2026, 3, 20), weeks_duration=8)
+    plan = _plan(start_date=datetime(2026, 3, 23), weeks_duration=8)
 
     status = plan_status(plan, TODAY)
 
-    assert status.label == "Starts Mar 20"
+    assert status.label == "Starts Mar 23"
     assert status.completed is False
 
 
@@ -124,7 +124,7 @@ def test_in_progress_skips_a_newer_plan_that_has_not_started():
     # nudge and the morning brief must keep talking about the running one.
     running = _plan("running", start_date=TODAY - timedelta(weeks=2), weeks_duration=8)
     unstarted = _plan("next", weeks_duration=10)
-    future = _plan("later", start_date=TODAY + timedelta(days=5), weeks_duration=10)
+    future = _plan("later", start_date=TODAY + timedelta(weeks=1), weeks_duration=10)
 
     assert in_progress_plan([unstarted, future, running], TODAY) is running
 

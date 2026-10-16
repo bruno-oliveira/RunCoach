@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="{{ static_url('css/plan/weeks.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/week-rail.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/coaching.css') }}">
-<link rel="stylesheet" href="{{ static_url('css/plan/customization.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/banners.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
@@ -17,7 +16,6 @@
 <link rel="stylesheet" href="{{ static_url('css/home-product.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/readiness-checkin.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/adapt-toast.css') }}">
-<link rel="stylesheet" href="{{ static_url('css/plan/fitness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/evolution.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/quality.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
@@ -96,20 +94,12 @@
             </p>
             {% elif training_plan.plan_type == 'recovery' %}
             <p>Easy running only while your race settles — the volume comes back week by week, with no hard sessions until it has.</p>
-            {% elif training_plan.plan_type == 'fitness' %}
-            <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
-            {% elif training_plan.plan_type == 'performance' %}
-            <p>Every session below is paced off your goal time, not just your current fitness.</p>
             {% else %}
             <p>Your week-by-week {{ target_distance | race_name }} build — every session here has a reason.</p>
             {% endif %}
         </div>
         {% elif training_plan.plan_type == 'recovery' %}
             <p>Easy running only while your race settles — the volume comes back week by week, with no hard sessions until it has.</p>
-        {% elif training_plan.plan_type == 'fitness' %}
-            <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
-        {% elif training_plan.plan_type == 'performance' %}
-            <p>Every session below is paced off your goal time, not just your current fitness.</p>
         {% elif is_backyard %}
             <p>Built for the hour — your week-by-week build to
                 <span class="trail-profile-badge">
@@ -383,58 +373,6 @@
     {% endfor %}
     {% endif %}
 
-    {# Fitness-plan dashboard is the core content for fitness plans, so it leads
-       (right under the This Week hero) rather than sitting among status panels. #}
-    {% if training_plan.plan_type == 'fitness' %}
-    <div class="fitness-dashboard">
-        <div class="fitness-dashboard-header">
-            <h3>Fitness Plan — {{ fitness_focus_area | title }} Focus</h3>
-            <p class="fitness-dashboard-subtitle"><span data-i18n="plan.fitness_focus">Physiological development with built-in progress tracking</span></p>
-        </div>
-
-        {% if vdot %}
-        <div class="fitness-vdot-card">
-            <div class="fitness-vdot-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            </div>
-            <div class="fitness-vdot-body">
-                <div class="fitness-vdot-value">{{ "%.1f"|format(vdot) }}</div>
-                <div class="fitness-vdot-label"><span data-i18n="plan.current_vdot">Current VDOT</span></div>
-                <p class="fitness-vdot-note">Time trials every 3 weeks will help track your VDOT progress</p>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if time_trial_weeks %}
-        <div class="fitness-tt-section">
-            <h4><span data-i18n="plan.time_trial_sched">Time Trial Schedule</span></h4>
-            <div class="fitness-tt-grid">
-                {% for tt in time_trial_weeks %}
-                <div class="fitness-tt-card">
-                    <div class="fitness-tt-week">Week {{ tt.week }}</div>
-                    <div class="fitness-tt-distance">{{ "%.1f"|format(tt.distance) }}km all-out</div>
-                    <div class="fitness-tt-desc">{{ tt.description }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="fitness-phases-section">
-            <h4><span data-i18n="plan.training_phases">Training Phases</span></h4>
-            <div class="fitness-phases-grid">
-                {% for pname, pdata in phases.items() %}
-                <div class="fitness-phase-card">
-                    <div class="fitness-phase-name">{{ pname | title }}</div>
-                    <div class="fitness-phase-weeks">{{ pdata.weeks }} weeks</div>
-                    <div class="fitness-phase-desc">{{ pdata.description }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     {# Plan-level actions — start date, adaptation alerts/recommendations, and
        the adjust prompt — sit directly under this week so they are acted on in
        context, before the reference and tab content. #}
@@ -443,17 +381,17 @@
     <div class="plan-start-banner">
         <p>Set a start date and I'll track your plan against real calendar dates.</p>
         <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ next_monday }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small"><span data-i18n="plan.start_plan">Start Plan</span></button>
+            {% with field_id = 'plan-start-date', field_name = none, selected = none %}{% include 'components/start_week_select.html' %}{% endwith %}
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-sm"><span data-i18n="plan.start_plan">Start Plan</span></button>
         </div>
     </div>
     {% else %}
     <div class="plan-start-banner plan-start-banner-edit" id="edit-start-date-banner" style="display:none;">
-        <p>Change start date (this will shift all week/day calendar labels)</p>
+        <p>Move the plan to another week. Every session keeps its weekday.</p>
         <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small"><span data-i18n="plan.update">Update</span></button>
-            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
+            {% with field_id = 'plan-start-date', field_name = none, selected = start_date %}{% include 'components/start_week_select.html' %}{% endwith %}
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-sm"><span data-i18n="plan.update">Update</span></button>
+            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-sm">Cancel</button>
         </div>
     </div>
     {% endif %}
@@ -511,9 +449,7 @@
             <svg class="plan-reference-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             <span class="plan-reference-title">Plan details &amp; pace zones</span>
             <span class="plan-reference-chips">
-                {% if training_plan.plan_type == 'fitness' %}
-                    {{ fitness_focus_area | title }}
-                {% elif is_backyard %}
+                {% if is_backyard %}
                     {{ backyard.target_loops }} loops · {{ backyard.loop_pace_str }}
                 {% elif is_trail %}
                     {{ target_distance }} km{% if target_elevation_gain_m %} · {{ target_elevation_gain_m | int }} m{% endif %}
@@ -536,9 +472,7 @@
             </div>
             <div class="summary-item">
                 <strong><span data-i18n="plan.target_distance">Target Distance</span></strong>
-                {% if training_plan.plan_type == 'fitness' %}
-                    Fitness — {{ fitness_focus_area | title }} Focus
-                {% elif is_backyard %}
+                {% if is_backyard %}
                     {{ backyard.target_loops }} loops Backyard · {{ backyard.total_distance_km }} km over {{ backyard.target_hours }} h
                 {% elif is_trail %}
                     {{ target_distance }} km Trail{% if target_elevation_gain_m %} · {{ target_elevation_gain_m | int }} m vert{% endif %}
@@ -727,7 +661,7 @@
     {% if (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
           and not (training_plan.last_change_plan and training_plan.last_change_plan.summary) %}
     <div style="margin-bottom: var(--space-6); display:flex; justify-content:flex-end;">
-        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn"><span data-i18n="plan.reset_original">Reset to original</span></button>
+        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-sm js-reset-adjust" id="reset-adjust-btn"><span data-i18n="plan.reset_original">Reset to original</span></button>
     </div>
     {% endif %}
 
@@ -757,9 +691,9 @@
             </div>
             <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
                 {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}
-                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn-lcp"><span data-i18n="plan.reset_original">Reset to original</span></button>
+                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-sm js-reset-adjust" id="reset-adjust-btn-lcp"><span data-i18n="plan.reset_original">Reset to original</span></button>
                 {% endif %}
-                <a href="#" class="btn btn-ghost btn-small" data-change-plan-view><span data-i18n="plan.view_details">View details</span></a>
+                <a href="#" class="btn btn-ghost btn-sm" data-change-plan-view><span data-i18n="plan.view_details">View details</span></a>
             </div>
         </div>
     </div>
@@ -972,7 +906,7 @@
             Save to My Plans
         </button>
         <a href="/my-plans" class="btn btn-ghost" id="view-plans-link" style="display: none;"><span data-i18n="plan.view_my_plans">View My Plans</span></a>
-        <a href="/" class="btn btn-ghost"><span data-i18n="plan.new_plan">New Plan</span></a>
+        <a href="/#build-plan" class="btn btn-ghost"><span data-i18n="home.back_start_another">Build another plan</span></a>
     </div>
     <div class="share-toast" id="share-toast"></div>
 </div>

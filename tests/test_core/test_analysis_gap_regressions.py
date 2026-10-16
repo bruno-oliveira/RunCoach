@@ -3,11 +3,7 @@
 import pytest
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.core.training.profiles.backyard_profile import classify_backyard
 from app.core.training.profiles.trail_profile import classify_trail
 
@@ -121,31 +117,3 @@ def test_frequency_peak_has_no_material_regression_when_adding_days():
             next_peak >= prior_peak - 2.0
             for prior_peak, next_peak in zip(peaks, peaks[1:])
         )
-
-
-def test_performance_plan_uses_shared_final_contract():
-    plan = PerformancePlanGenerator().generate_plan(10, 6, 5.4, 8, 25, 3)[
-        "weekly_plans"
-    ]
-    assert check_plan_structure(plan) == {"fatal": [], "warnings": []}
-    assert all(week["validation"]["status"] == "valid" for week in plan)
-    assert any(w["type"] == "race" for w in plan[-1]["daily_workouts"])
-    assert plan[-1]["is_race_week"] is True
-
-
-def test_performance_loading_weeks_obey_delivered_high_water_ramp():
-    plan = PerformancePlanGenerator().generate_plan(5, 6, 5.4, 12, 20, 6)[
-        "weekly_plans"
-    ]
-    high_water = 20.0
-    for week in plan:
-        if week.get("is_recovery") or week.get("is_race_week"):
-            continue
-        assert week["training_km"] <= high_water * 1.12
-        high_water = max(high_water, week["training_km"])
-
-
-@pytest.mark.parametrize("weeks", [5, 17])
-def test_performance_generator_rejects_duration_instead_of_clamping(weeks):
-    with pytest.raises(ValueError, match="6-16"):
-        PerformancePlanGenerator().generate_plan(10, 6, 5.4, weeks, 25, 4)

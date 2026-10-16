@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.coaching.verdict import verdict_from_thresholds
 from app.core.formatting import parse_race_time_to_seconds
 from app.core.time_utils import to_date as _to_date
+from app.core.training.physiology.race_predictor import vdot_needed_for
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog, TrainingPlan
 
@@ -246,20 +247,16 @@ def _compute_fitness_trajectory(
             "on_track": None,
         }
 
-    # Compute needed VDOT from goal time if available
-    needed_vdot = None
-    if plan.goal_time:
-        goal_seconds = parse_race_time_to_seconds(plan.goal_time)
-        if goal_seconds and plan.target_distance_km > 0:
-            # Search for the VDOT that yields the goal time
-            for test_vdot_10x in range(250, 850):
-                test_vdot = test_vdot_10x / 10.0
-                pred = VDOTCalculator.predict_time_for_distance(
-                    test_vdot, plan.target_distance_km
-                )
-                if pred and pred <= goal_seconds:
-                    needed_vdot = test_vdot
-                    break
+    goal_seconds = parse_race_time_to_seconds(plan.goal_time or "")
+    needed_vdot = (
+        vdot_needed_for(
+            plan.target_distance_km,
+            goal_seconds,
+            prediction_data.get("calibration_factor", 1.0),
+        )
+        if goal_seconds
+        else None
+    )
 
     on_track = None
     if needed_vdot is not None:

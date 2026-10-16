@@ -106,6 +106,9 @@
 {% set read = page.read %}
 {% set goal = page.goal %}
 {% set focus = read.focus %}
+{# The one change is said once, in the lead card; the lists hold the rest. #}
+{% set other_goal_findings = read.goal_findings | reject('equalto', focus) | list %}
+{% set other_recent_findings = read.recent_findings | reject('equalto', focus) | list %}
 <div class="coach-page">
     <div class="container">
         <header class="coach-header">
@@ -124,6 +127,7 @@
             <div class="coach-focus">
                 <p class="coach-eyebrow" data-i18n="coach.one_change">The one change</p>
                 <p class="coach-focus-what" data-i18n="coach.{{ focus.key }}">{{ findings[focus.key][0] }}</p>
+                {% if focus.figures %}<p class="coach-finding-figure">{{ figure(focus) }}</p>{% endif %}
                 <p class="coach-focus-do" data-i18n="coach.{{ focus.key }}_do">{{ findings[focus.key][1] }}</p>
                 {% if goal and (focus.area in goal_areas or focus.key in run_fixes) %}
                 <a class="btn btn-accent" href="{{ goal.url }}" data-i18n="coach.open_plan">Open your plan</a>
@@ -136,7 +140,7 @@
             {% if user.intervals_athlete_id %}
             <a class="btn btn-accent" href="/run" data-i18n="coach.build_run">Build today's run</a>
             {% else %}
-            <button type="button" class="btn btn-accent" onclick="connectWatch()" data-i18n="nav.connect_watch">Connect your watch</button>
+            <button type="button" class="btn btn-accent" onclick="connectWatch()" data-i18n="nav.connect_watch">Connect your runs</button>
             {% endif %}
             {% elif read.state == 'early_days' %}
             <p class="coach-read-note" data-i18n="coach.early_days_note">It takes four runs in four weeks to say anything honest about your training.</p>
@@ -146,6 +150,7 @@
         </section>
 
         {# ── Question one: is it enough for the goal? ────────────────────── #}
+        {% if read.state != 'no_runs' %}
         <section class="coach-section" aria-labelledby="coachGoalTitle">
             <h2 class="coach-section-title" id="coachGoalTitle" data-i18n="coach.goal_title">For your goal</h2>
             {% if not goal %}
@@ -168,15 +173,16 @@
                 <span data-i18n="coach.goal_window_weeks">completed week(s). Every run counts, whichever day you did it.</span>
             </p>
             {% endif %}
+            {% if other_goal_findings %}
             <ul class="coach-card coach-findings">
-                {% for f in read.goal_findings %}{{ finding_row(f) }}{% endfor %}
+                {% for f in other_goal_findings %}{{ finding_row(f) }}{% endfor %}
             </ul>
+            {% endif %}
             <a class="coach-more" href="{{ goal.url }}" data-i18n="coach.goal_more">Race readiness and predicted times are on your plan</a>
             {% endif %}
         </section>
 
         {# ── Question two: what does the running itself say? ─────────────── #}
-        {% if read.state != 'no_runs' %}
         <section class="coach-section" aria-labelledby="coachRecentTitle">
             <h2 class="coach-section-title" id="coachRecentTitle" data-i18n="coach.recent_title">From your last four weeks</h2>
 
@@ -193,9 +199,9 @@
                 <p class="coach-weeks-note" data-i18n="coach.weeks_note">Kilometres a week. The last bar is this week so far.</p>
             </div>
 
-            {% if read.recent_findings %}
+            {% if other_recent_findings %}
             <ul class="coach-card coach-findings">
-                {% for f in read.recent_findings %}{{ finding_row(f) }}{% endfor %}
+                {% for f in other_recent_findings %}{{ finding_row(f) }}{% endfor %}
             </ul>
             {% endif %}
         </section>

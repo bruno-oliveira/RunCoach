@@ -70,6 +70,19 @@ def test_a_runner_with_no_runs_gets_no_findings():
     assert read.recent_findings == () and read.focus is None
 
 
+def test_a_plan_with_no_runs_on_record_is_not_judged_behind():
+    """Not connected yet is not "missing every session": there is no evidence."""
+    read = read_training(
+        _recent(days_since_last_run=None, run_lengths_km=[], split=None),
+        has_goal=True,
+        goal=_goal(done_sessions=0, actual_km=0.0, longest_km=0.0),
+    )
+
+    assert read.headline == "no_runs"
+    assert read.goal_state is None and read.goal_findings == ()
+    assert read.focus is None
+
+
 def test_too_few_runs_is_not_read_as_a_pattern():
     read = _read(_recent(run_lengths_km=[5.0, 5.0], split=None))
 

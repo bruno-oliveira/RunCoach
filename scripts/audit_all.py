@@ -22,7 +22,6 @@ the engine has no such enum:
 
 - ``recovery``       — road distance-goal plans on a rebuilding base (≤ 30 km/wk)
 - ``base``           — road distance-goal plans, any base
-- ``performance``    — time-goal road plans (PerformancePlanGenerator)
 - ``backyard``       — hourly-loop goals (BackyardProfile); the goal distance
                        maps to a loop count at the standard 6.706 km loop
 - ``transformation`` — trail/ultra projections (trail_profile) at 100 km+
@@ -35,7 +34,7 @@ Usage:
     python3 scripts/audit_all.py                     # full matrix
     python3 scripts/audit_all.py --mode robustness   # schema rejection report
     python3 scripts/audit_all.py --mode all          # legacy direct sweep
-    python3 scripts/audit_all.py --plan-types base,performance
+    python3 scripts/audit_all.py --plan-types base,backyard
     python3 scripts/audit_all.py --frequencies 2,3 --bases 20,30
     python3 scripts/audit_all.py --output /tmp/report.json --max-plans 200
 """
@@ -46,26 +45,16 @@ import logging
 import time
 from collections import defaultdict
 
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.core.training.periodization import mileage_progression
-from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.profiles.backyard_profile import classify_backyard
 from app.core.training.profiles.trail_profile import classify_trail
 from app.schemas import PlanRequest
-from app.schemas.performance_request import PerformancePlanRequest
 
 # The audit runs the engine, not the web schema: one fixed fitness anchor so
 # cells differ only by the axis under test (same convention as eval_lowfreq).
 VDOT = 45.0
-
-# Performance plans are paced, not VDOT-seeded: the generator derives its own
-# VDOT from the current pace. 6.0 → 5.6 min/km is a realistic ~7% goal.
-PERF_CURRENT_PACE = 6.0
-PERF_GOAL_PACE = 5.6
 
 BACKYARD_LOOP_KM = 6.706
 
@@ -83,11 +72,6 @@ PLAN_TYPE_SPECS = {
     "base": {
         "distances": [5.0, 10.0, 21.1, 42.2],
         "description": "road distance-goal, any base",
-    },
-    "performance": {
-        "distances": [5.0, 10.0, 21.1, 42.2],
-        "weeks": [8, 12, 16],
-        "description": "time-goal road plans",
     },
     "backyard": {
         "distances": [56.0, 100.0, 160.0, 240.0],
@@ -136,14 +120,6 @@ class _BuilderWarningCollector(logging.Handler):
 
 def _targets_for(plan_type, base, distance, runs, weeks, vdot, plan=None):
     """Recompute targets only for legacy output without stamped targets."""
-    if plan_type == "performance":
-        eff_weeks = len(plan["weekly_plans"])
-        implied_seconds = int(PERF_CURRENT_PACE * distance * 60)
-        plan_vdot = VDOTCalculator.calculate_vdot(distance, implied_seconds)
-        progression = mileage_progression.calculate_weekly_progression(
-            base, distance, eff_weeks, runs, plan_vdot
-        )
-        return _apply_reachability_gate(progression, base, runs, trail=None)
     if plan_type == "backyard":
         profile = classify_backyard(backyard_loops_for_distance(distance))
         progression = mileage_progression.calculate_weekly_progression(
@@ -199,19 +175,7 @@ def _generate(plan_type, base, distance, runs, weeks, vdot):
     logger = logging.getLogger(BUILDER_LOGGER)
     logger.addHandler(collector)
     try:
-        if plan_type == "performance":
-            plan = PerformancePlanGenerator().generate_plan(
-                target_distance=distance,
-                current_pace=PERF_CURRENT_PACE,
-                goal_pace=PERF_GOAL_PACE,
-                weeks=weeks,
-                current_weekly_km=base,
-                runs_per_week=runs,
-            )
-            targets = _targets_for(
-                plan_type, base, distance, runs, weeks, vdot, plan=plan
-            )
-        elif plan_type == "backyard":
+        if plan_type == "backyard":
             profile = classify_backyard(backyard_loops_for_distance(distance))
             plan = TrainingPlanGenerator().generate_plan(
                 base,
@@ -235,7 +199,7 @@ def _generate(plan_type, base, distance, runs, weeks, vdot):
             targets = _targets_for(plan_type, base, distance, runs, weeks, vdot)
     finally:
         logger.removeHandler(collector)
-    plan_weeks = plan if isinstance(plan, list) else plan["weekly_plans"]
+    plan_weeks = plan
     stamped = [week.get("weekly_target_km") for week in plan_weeks]
     if stamped and all(target is not None for target in stamped):
         targets = stamped
@@ -253,7 +217,7 @@ def _week_sessions(week):
 
 def extract_plan_record(config, plan, targets, builder_warnings):
     """Normalize one generated plan into per-week metrics and roll-ups."""
-    plan_weeks = plan if isinstance(plan, list) else plan["weekly_plans"]
+    plan_weeks = plan
     guard = check_plan_structure(plan_weeks)
     weekly = []
     delivered_high_water = config["base_km"]
@@ -456,17 +420,6 @@ def _validate_product_config(config):
     }
     plan_type = config["plan_type"]
     distance = config["distance_km"]
-    if plan_type == "performance":
-        return PerformancePlanRequest(
-            target_distance=distance,
-            current_pace=PERF_CURRENT_PACE,
-            goal_pace=PERF_GOAL_PACE,
-            current_time="current pace",
-            goal_time="goal pace",
-            weeks=config["weeks"],
-            current_weekly_km=config["base_km"],
-            runs_per_week=config["runs_per_week"],
-        )
     if plan_type == "backyard":
         return PlanRequest(
             **common,
@@ -546,8 +499,6 @@ def run_audit(args):
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "mode": mode,
             "vdot": vdot,
-            "perf_current_pace": PERF_CURRENT_PACE,
-            "perf_goal_pace": PERF_GOAL_PACE,
             "configs_requested": count,
             "plans_generated": sum(1 for r in records if r["status"] == "ok"),
             "failed": sum(1 for r in records if r["status"] == "failed"),
@@ -682,7 +633,7 @@ def main():
     parser.add_argument(
         "--plan-types",
         default=None,
-        help="comma list: recovery,base,performance,backyard,transformation",
+        help="comma list: recovery,base,backyard,transformation",
     )
     parser.add_argument("--bases", default=None, help="comma list of km/week values")
     parser.add_argument(

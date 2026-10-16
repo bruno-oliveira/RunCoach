@@ -1,4 +1,4 @@
-"""Plan-schema helpers shared across PlanRequest / PerformancePlanRequest."""
+"""Plan-schema helpers used by PlanRequest."""
 
 from typing import Optional
 

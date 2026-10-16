@@ -8,7 +8,6 @@ from app.web.routers.intervals import intervals_router
 from app.web.routers.notifications import notifications_router
 from app.web.routers.nutrition import router as nutrition_router
 from app.web.routers.pages import router as pages_router
-from app.web.routers.performance_pages import router as performance_page_router
 from app.web.routers.plans import router as plans_router
 from app.web.routers.push import push_router
 from app.web.routers.readiness import readiness_router
@@ -33,7 +32,6 @@ __all__ = [
     "scheduled_router",
     "single_runs_router",
     "readiness_router",
-    "performance_page_router",
     "analytics_router",
     "coach_page_router",
 ]

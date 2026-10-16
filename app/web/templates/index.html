@@ -111,7 +111,7 @@
                 {% else %}
                 <button type="button" class="btn btn-ghost btn-lg status-conn-btn" onclick="connectWatch()">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
-                    <span data-i18n="home.cta_connect">Connect your watch</span>
+                    <span data-i18n="home.cta_connect">Connect your runs</span>
                 </button>
                 {% endif %}
             </div>
@@ -130,7 +130,7 @@
             <p class="status-hero-note">
                 <a href="/my-plans" class="status-hero-link" data-i18n="home.back_all_plans">All my plans</a>
                 <span class="status-hero-sep" aria-hidden="true">·</span>
-                <a href="#build-plan" onclick="scrollToBuild(); return false;" class="status-hero-link" data-i18n="home.back_start_another">Start another plan</a>
+                <a href="#build-plan" onclick="scrollToBuild(); return false;" class="status-hero-link" data-i18n="home.back_start_another">Build another plan</a>
                 <span class="status-hero-sep" aria-hidden="true">·</span>
                 <a href="/run" class="status-hero-link" data-i18n="home.back_single_run">Just one run today</a>
             </p>
@@ -383,41 +383,6 @@ function scrollToBuild() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function setPlanMode(mode) {
-    document.getElementById('plan_mode').value = mode;
-    var distBtn = document.getElementById('mode-distance-btn');
-    var timeBtn = document.getElementById('mode-time-btn');
-    var distFields = document.getElementById('distance-mode-fields');
-    var timeFields = document.getElementById('time-mode-fields');
-    var form = document.getElementById('plan-form');
-    var submitBtn = document.getElementById('form-submit-btn');
-    var desc = document.getElementById('mode-description');
-
-    distBtn.classList.remove('mode-btn-active');
-    timeBtn.classList.remove('mode-btn-active');
-
-    var sections = [distFields, timeFields];
-    var activeSection = mode === 'time' ? timeFields : distFields;
-    sections.forEach(function(section) {
-        var hidden = section !== activeSection;
-        section.style.display = hidden ? 'none' : '';
-        section.querySelectorAll('input, select').forEach(function(el) {
-            el.disabled = hidden;
-        });
-    });
-
-    if (mode === 'time') {
-        timeBtn.classList.add('mode-btn-active');
-        form.action = '/generate-plan';
-        submitBtn.querySelector('svg').style.display = '';
-        desc.textContent = 'Target a specific finish time — every workout is paced off your goal.';
-    } else {
-        distBtn.classList.add('mode-btn-active');
-        form.action = '/generate-plan';
-        desc.textContent = 'Build a structured plan to finish a race at a specific distance.';
-    }
-}
-
     // Execute immediately - script is at end of body so DOM is already ready
     (function() {
     // Trail / ultra panel — show distance + elevation inputs when the user
@@ -627,14 +592,6 @@ function setPlanMode(mode) {
 
     const currentKmField = document.getElementById('current_km');
 
-    // Initialize mode from query param (always run to disable hidden sections)
-    var initialMode = document.getElementById('plan_mode').value || 'distance';
-    var timeBtnInit = document.getElementById('mode-time-btn');
-    if (initialMode === 'time' && timeBtnInit.disabled) {
-        initialMode = 'distance';
-    }
-    setPlanMode(initialMode);
-
     // Bracket-aware runs/week floors:
     //   road 5K/10K → 2+, half/marathon → 3+
     //   trail short → 3+, standard → 4+, ultra → 5+, long_ultra → 6+
@@ -681,7 +638,6 @@ function setPlanMode(mode) {
 
         form.addEventListener('submit', function(e) {
             const currentKm = document.getElementById('current_km');
-            var planMode = document.getElementById('plan_mode').value;
 
             if (!currentKm.value || parseFloat(currentKm.value) < 0) {
                 e.preventDefault();
@@ -689,167 +645,140 @@ function setPlanMode(mode) {
                 return false;
             }
 
-            // Distance mode validation
-            if (planMode === 'distance') {
-                const targetDistance = document.getElementById('target_distance');
-                const weeks = document.getElementById('weeks');
+            const targetDistance = document.getElementById('target_distance');
+            const weeks = document.getElementById('weeks');
 
-                // Backyard: the dropdown keeps its "backyard" sentinel and the
-                // backend derives the training distance from the loop count.
-                if (isBackyardMode()) {
-                    const y = backyardLoops();
-                    if (y === null || y < 6 || y > 48) {
+            // Backyard: the dropdown keeps its "backyard" sentinel and the
+            // backend derives the training distance from the loop count.
+            if (isBackyardMode()) {
+                const y = backyardLoops();
+                if (y === null || y < 6 || y > 48) {
+                    e.preventDefault();
+                    notify('Pick a target between 6 and 48 loops \u2014 that is how many hourly loops you are training to complete.', { type: 'error' });
+                    loopsField.focus();
+                    return false;
+                }
+                const loopKm = parseFloat(loopKmField.value);
+                if (isNaN(loopKm) || loopKm < 5.5 || loopKm > 8) {
+                    e.preventDefault();
+                    notify('Loop length must be between 5.5 km and 8 km. The standard backyard loop is 6.706 km.', { type: 'error' });
+                    loopKmField.focus();
+                    return false;
+                }
+                const loopElev = loopElevField.value === '' ? 0 : parseFloat(loopElevField.value);
+                if (isNaN(loopElev) || loopElev < 0 || loopElev > 400) {
+                    e.preventDefault();
+                    notify('Enter the climb per loop in metres (0\u2013400). Use 0 for a flat loop.', { type: 'error' });
+                    loopElevField.focus();
+                    return false;
+                }
+                const tier = backyardTier(y);
+                const wk = parseInt(weeks.value);
+                if (wk < BACKYARD_MIN_WEEKS[tier] || wk > BACKYARD_MAX_WEEKS[tier]) {
+                    e.preventDefault();
+                    notify(`A ${y}-loop goal needs ${BACKYARD_MIN_WEEKS[tier]}\u2013${BACKYARD_MAX_WEEKS[tier]} weeks of training.`, { type: 'error' });
+                    weeks.focus();
+                    return false;
+                }
+                const runs = parseInt(runsSelect.value);
+                if (runs < backyardMinRuns()) {
+                    e.preventDefault();
+                    notify(`A ${y}-loop plan needs at least ${backyardMinRuns()} runs/week \u2014 backyard volume arrives as many medium sessions, not a few big ones.`, { type: 'error' });
+                    runsSelect.focus();
+                    return false;
+                }
+                const km = parseFloat(currentKm.value);
+                if (km < backyardMinKm()) {
+                    e.preventDefault();
+                    notify(`A ${y}-loop goal needs about ${backyardMinKm()} km/week of base to train from. Build that first, then come back.`, { type: 'error' });
+                    currentKm.focus();
+                    return false;
+                }
+            } else if (isTrailMode()) {
+                const trailKm = parseFloat(trailDistanceField.value);
+                if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
+                    e.preventDefault();
+                    notify('Pick a trail distance between 8 km and 163 km (100 mi).', { type: 'error' });
+                    trailDistanceField.focus();
+                    return false;
+                }
+                const elev = parseFloat(elevationField.value);
+                if (isNaN(elev) || elev < 0 || elev > 10000) {
+                    e.preventDefault();
+                    notify('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.', { type: 'error' });
+                    elevationField.focus();
+                    return false;
+                }
+                if (!trainingTerrainField.value) {
+                    e.preventDefault();
+                    notify('Tell us the terrain you can train on so we can shape your trail sessions to it.', { type: 'error' });
+                    trainingTerrainField.focus();
+                    return false;
+                }
+                if (parseFloat(currentKm.value) === 0) {
+                    e.preventDefault();
+                    notify('Trail and ultra plans build on an existing base — get to about 15 km/week first, then come back.', { type: 'error' });
+                    currentKm.focus();
+                    return false;
+                }
+                const minRuns = trailMinRuns();
+                const runs = parseInt(runsSelect.value);
+                if (runs < minRuns) {
+                    e.preventDefault();
+                    notify(`This bracket needs at least ${minRuns} runs/week to work — bump up your runs or pick a shorter race.`, { type: 'error' });
+                    runsSelect.focus();
+                    return false;
+                }
+                // Bracket-aware mileage floor: max(15, 0.35 × distance), +20% mountainous.
+                const cls = elevationClass(trailKm, elev);
+                let minKm = Math.max(15, 0.35 * trailKm);
+                if (cls === 'mountainous') minKm *= 1.20;
+                const km = parseFloat(currentKm.value);
+                if (km > 0 && km < Math.round(minKm * 10) / 10) {
+                    e.preventDefault();
+                    notify(`A ${trailKm} km trail/ultra needs about ${minKm.toFixed(1)} km/week of base to train safely.`, { type: 'error' });
+                    currentKm.focus();
+                    return false;
+                }
+            } else {
+                if (parseFloat(currentKm.value) === 0) {
+                    const supportedDistances = [5, 10];
+                    const selectedDistance = parseFloat(targetDistance.value);
+                    if (!supportedDistances.includes(selectedDistance)) {
                         e.preventDefault();
-                        notify('Pick a target between 6 and 48 loops \u2014 that is how many hourly loops you are training to complete.', { type: 'error' });
-                        loopsField.focus();
+                        notify('Starting from zero works for 5K and 10K goals. For longer races, pick a shorter distance or tell us your current weekly mileage.', { type: 'error' });
+                        targetDistance.focus();
                         return false;
                     }
-                    const loopKm = parseFloat(loopKmField.value);
-                    if (isNaN(loopKm) || loopKm < 5.5 || loopKm > 8) {
+                    if (parseInt(weeks.value) < 8) {
                         e.preventDefault();
-                        notify('Loop length must be between 5.5 km and 8 km. The standard backyard loop is 6.706 km.', { type: 'error' });
-                        loopKmField.focus();
-                        return false;
-                    }
-                    const loopElev = loopElevField.value === '' ? 0 : parseFloat(loopElevField.value);
-                    if (isNaN(loopElev) || loopElev < 0 || loopElev > 400) {
-                        e.preventDefault();
-                        notify('Enter the climb per loop in metres (0\u2013400). Use 0 for a flat loop.', { type: 'error' });
-                        loopElevField.focus();
-                        return false;
-                    }
-                    const tier = backyardTier(y);
-                    const wk = parseInt(weeks.value);
-                    if (wk < BACKYARD_MIN_WEEKS[tier] || wk > BACKYARD_MAX_WEEKS[tier]) {
-                        e.preventDefault();
-                        notify(`A ${y}-loop goal needs ${BACKYARD_MIN_WEEKS[tier]}\u2013${BACKYARD_MAX_WEEKS[tier]} weeks of training.`, { type: 'error' });
+                        notify('Starting from scratch needs at least 8 weeks to progress safely — give yourself a little more runway.', { type: 'error' });
                         weeks.focus();
                         return false;
                     }
-                    const runs = parseInt(runsSelect.value);
-                    if (runs < backyardMinRuns()) {
-                        e.preventDefault();
-                        notify(`A ${y}-loop plan needs at least ${backyardMinRuns()} runs/week \u2014 backyard volume arrives as many medium sessions, not a few big ones.`, { type: 'error' });
-                        runsSelect.focus();
-                        return false;
-                    }
-                    const km = parseFloat(currentKm.value);
-                    if (km < backyardMinKm()) {
-                        e.preventDefault();
-                        notify(`A ${y}-loop goal needs about ${backyardMinKm()} km/week of base to train from. Build that first, then come back.`, { type: 'error' });
-                        currentKm.focus();
-                        return false;
-                    }
-                } else if (isTrailMode()) {
-                    const trailKm = parseFloat(trailDistanceField.value);
-                    if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
-                        e.preventDefault();
-                        notify('Pick a trail distance between 8 km and 163 km (100 mi).', { type: 'error' });
-                        trailDistanceField.focus();
-                        return false;
-                    }
-                    const elev = parseFloat(elevationField.value);
-                    if (isNaN(elev) || elev < 0 || elev > 10000) {
-                        e.preventDefault();
-                        notify('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.', { type: 'error' });
-                        elevationField.focus();
-                        return false;
-                    }
-                    if (!trainingTerrainField.value) {
-                        e.preventDefault();
-                        notify('Tell us the terrain you can train on so we can shape your trail sessions to it.', { type: 'error' });
-                        trainingTerrainField.focus();
-                        return false;
-                    }
-                    if (parseFloat(currentKm.value) === 0) {
-                        e.preventDefault();
-                        notify('Trail and ultra plans build on an existing base — get to about 15 km/week first, then come back.', { type: 'error' });
-                        currentKm.focus();
-                        return false;
-                    }
-                    const minRuns = trailMinRuns();
-                    const runs = parseInt(runsSelect.value);
-                    if (runs < minRuns) {
-                        e.preventDefault();
-                        notify(`This bracket needs at least ${minRuns} runs/week to work — bump up your runs or pick a shorter race.`, { type: 'error' });
-                        runsSelect.focus();
-                        return false;
-                    }
-                    // Bracket-aware mileage floor: max(15, 0.35 × distance), +20% mountainous.
-                    const cls = elevationClass(trailKm, elev);
-                    let minKm = Math.max(15, 0.35 * trailKm);
-                    if (cls === 'mountainous') minKm *= 1.20;
-                    const km = parseFloat(currentKm.value);
-                    if (km > 0 && km < Math.round(minKm * 10) / 10) {
-                        e.preventDefault();
-                        notify(`A ${trailKm} km trail/ultra needs about ${minKm.toFixed(1)} km/week of base to train safely.`, { type: 'error' });
-                        currentKm.focus();
-                        return false;
-                    }
-                } else {
-                    if (parseFloat(currentKm.value) === 0) {
-                        const supportedDistances = [5, 10];
-                        const selectedDistance = parseFloat(targetDistance.value);
-                        if (!supportedDistances.includes(selectedDistance)) {
-                            e.preventDefault();
-                            notify('Starting from zero works for 5K and 10K goals. For longer races, pick a shorter distance or tell us your current weekly mileage.', { type: 'error' });
-                            targetDistance.focus();
-                            return false;
-                        }
-                        if (parseInt(weeks.value) < 8) {
-                            e.preventDefault();
-                            notify('Starting from scratch needs at least 8 weeks to progress safely — give yourself a little more runway.', { type: 'error' });
-                            weeks.focus();
-                            return false;
-                        }
-                    }
-
-                    const km = parseFloat(currentKm.value);
-                    const dist = parseFloat(targetDistance.value);
-                    const minMileage = {5: 5, 10: 10, 21.1: 15, 42.2: 25};
-                    const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 42.2: 'Marathon'};
-                    if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
-                        e.preventDefault();
-                        notify(distNames[dist] + ' training needs about ' + minMileage[dist] + ' km/week to start from — build your base a bit more first.', { type: 'error' });
-                        currentKm.focus();
-                        return false;
-                    }
                 }
 
-                if (!targetDistance.value) {
+                const km = parseFloat(currentKm.value);
+                const dist = parseFloat(targetDistance.value);
+                const minMileage = {5: 5, 10: 10, 21.1: 15, 42.2: 25};
+                const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 42.2: 'Marathon'};
+                if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
                     e.preventDefault();
-                    targetDistance.focus();
-                    return false;
-                }
-                if (!weeks.value || parseInt(weeks.value) < 4) {
-                    e.preventDefault();
-                    weeks.focus();
+                    notify(distNames[dist] + ' training needs about ' + minMileage[dist] + ' km/week to start from — build your base a bit more first.', { type: 'error' });
+                    currentKm.focus();
                     return false;
                 }
             }
 
-            // Time mode validation
-            if (planMode === 'time') {
-                const targetDistance = document.getElementById('target_distance_time');
-                const weeks = document.getElementById('weeks_time');
-                const goalTimeReq = document.getElementById('goal_time_required');
-
-                if (!targetDistance.value) {
-                    e.preventDefault();
-                    targetDistance.focus();
-                    return false;
-                }
-                if (!weeks.value || parseInt(weeks.value) < 6) {
-                    e.preventDefault();
-                    weeks.focus();
-                    return false;
-                }
-                if (!goalTimeReq.value || !goalTimeReq.value.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
-                    e.preventDefault();
-                    goalTimeReq.focus();
-                    notify('Enter your goal finish time as MM:SS or HH:MM:SS (e.g. 1:45:00).', { type: 'error' });
-                    return false;
-                }
+            if (!targetDistance.value) {
+                e.preventDefault();
+                targetDistance.focus();
+                return false;
+            }
+            if (!weeks.value || parseInt(weeks.value) < 4) {
+                e.preventDefault();
+                weeks.focus();
+                return false;
             }
 
             // Disable button after form starts submitting (prevents blocking submission)
@@ -865,8 +794,7 @@ function setPlanMode(mode) {
         // This POST answers 303 -> /plan/{id}, so pressing Back lands here from
         // the bfcache with the frozen DOM: the button still disabled and still
         // reading "Generating…", and the inline script never re-running to clear
-        // it — the form is then unusable for good. (The missing arrow icon also
-        // made a later setPlanMode() throw.) Undo the pending state whenever the
+        // it — the form is then unusable for good. Undo the pending state whenever the
         // page is restored; on a normal load nothing was captured, so this is a
         // no-op.
         window.addEventListener('pageshow', function() {
@@ -892,10 +820,6 @@ function setPlanMode(mode) {
 
     function updateLongRunHint() {
         if (!longRunHint || !longRunHintText) return;
-        if (document.getElementById('plan_mode').value !== 'distance') {
-            hideLongRunHint();
-            return;
-        }
         if (isBackyardMode()) {
             // The hint asks whether the plan can build a race-specific long
             // run. A backyard's longest session is a loop simulation sized by
@@ -952,10 +876,6 @@ function setPlanMode(mode) {
             if (!el) return;
             el.addEventListener('input', scheduleLongRunHint);
             el.addEventListener('change', scheduleLongRunHint);
-        });
-        ['mode-distance-btn', 'mode-time-btn'].forEach(function(id) {
-            const btn = document.getElementById(id);
-            if (btn) btn.addEventListener('click', scheduleLongRunHint);
         });
         scheduleLongRunHint();
     }

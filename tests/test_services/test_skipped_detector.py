@@ -18,11 +18,13 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation.skipped_detector import detect_skipped_workouts
+from app.core.training.periodization.plan_calendar import week_monday
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 # Far enough back that every workout the helpers below build is in the past for
 # ``local_today``, whichever zone the suite runs in.
-PLAN_START = datetime.now() - timedelta(days=56)
+# Plans start on Mondays, so the fixture does too.
+PLAN_START = week_monday(datetime.now() - timedelta(days=56))
 
 PLAN_ID = "skip-plan-1"
 

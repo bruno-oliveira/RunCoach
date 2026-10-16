@@ -150,12 +150,6 @@ def long_run_share_ceiling(max_runs: int) -> float:
     return 0.55
 
 
-def in_peak_week_band(distance_km: float, max_runs: int, peak_km: float) -> bool:
-    """Whether ``peak_km`` sits inside the band (inclusive, 0.05 km slack)."""
-    lo, hi = peak_week_band(distance_km, max_runs)
-    return lo - 0.05 <= peak_km <= hi + 0.05
-
-
 def _interpolate(
     table: Dict[float, Tuple[float, float]], key: float
 ) -> Tuple[float, float]:

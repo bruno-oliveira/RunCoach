@@ -1,7 +1,7 @@
 """Date utilities for training plan week tracking."""
 
 from datetime import date, timedelta
-from typing import Optional, overload
+from typing import Optional, TypeVar, overload
 
 from app.core.time_utils import local_today
 
@@ -103,6 +103,19 @@ def plan_has_ended(
     return (today - start_date).days >= 7 * weeks_duration
 
 
+_Day = TypeVar("_Day", bound=date)
+
+
+def week_monday(day: _Day) -> _Day:
+    """The Monday that opens the week ``day`` falls in.
+
+    A plan's ``day`` field is an ISO weekday (1 = Monday), and its weeks are
+    counted from ``start_date`` — the two only agree when the plan starts on a
+    Monday, so every start date is snapped through here.
+    """
+    return day - timedelta(days=day.weekday())
+
+
 def next_monday() -> str:
     """Return the ISO date string of the next Monday."""
     today = local_today()
@@ -112,15 +125,29 @@ def next_monday() -> str:
     return (today + timedelta(days=days_ahead)).isoformat()
 
 
+def start_mondays(selected: Optional[date] = None, count: int = 8) -> list[date]:
+    """The Mondays a plan can start on: this week's and the ``count - 1`` after.
+
+    ``selected`` (a plan's current start) is kept among them even when it has
+    passed, so editing a running plan's start shows where it stands.
+    """
+    first = week_monday(local_today())
+    mondays = [first + timedelta(weeks=i) for i in range(count)]
+    if selected is not None and week_monday(selected) not in mondays:
+        mondays.insert(0, week_monday(selected))
+    return mondays
+
+
 def workout_dates(start_date: date, num_weeks: int) -> dict[tuple[int, int], str]:
     """Map (week, day) to formatted date string like 'Mon, Mar 3'."""
-    day_abbrevs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     result = {}
     for w in range(num_weeks):
         week_start = start_date + timedelta(weeks=w)
         for d in range(7):
             dt = week_start + timedelta(days=d)
-            result[(w + 1, d + 1)] = f"{day_abbrevs[d]}, {dt.strftime('%b')} {dt.day}"
+            result[(w + 1, d + 1)] = (
+                f"{dt.strftime('%a')}, {dt.strftime('%b')} {dt.day}"
+            )
     return result
 
 

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.core.formatting import parse_race_time_to_seconds
 from app.core.time_utils import to_date as _to_date
+from app.core.training.physiology.race_predictor import vdot_needed_for
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
@@ -206,20 +207,13 @@ def score_taper(
 
 
 def vdot_for_goal_time(
-    goal_time_str: str, target_distance_km: float
+    goal_time_str: str, target_distance_km: float, calibration_factor: float = 1.0
 ) -> Optional[float]:
-    """Find the VDOT needed to achieve a goal time at a given distance."""
+    """The VDOT the runner needs for ``goal_time_str`` at this distance."""
     goal_seconds = parse_race_time_to_seconds(goal_time_str)
-    if not goal_seconds or target_distance_km <= 0:
+    if not goal_seconds:
         return None
-
-    for test_vdot_10x in range(250, 850):
-        test_vdot = test_vdot_10x / 10.0
-        pred = VDOTCalculator.predict_time_for_distance(test_vdot, target_distance_km)
-        if pred and pred <= goal_seconds:
-            return test_vdot
-
-    return None
+    return vdot_needed_for(target_distance_km, goal_seconds, calibration_factor)
 
 
 def score_vdot(
@@ -240,7 +234,9 @@ def score_vdot(
 
     needed_vdot = None
     if goal_time:
-        needed_vdot = vdot_for_goal_time(goal_time, target_dist)
+        needed_vdot = vdot_for_goal_time(
+            goal_time, target_dist, prediction_data.get("calibration_factor", 1.0)
+        )
 
     vdot_info = {
         "current": current_vdot,

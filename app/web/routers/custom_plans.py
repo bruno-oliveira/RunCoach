@@ -63,7 +63,6 @@ def custom_plan_page(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
-            "current_page": "custom_plan",
             "road_distances": road,
         },
     )

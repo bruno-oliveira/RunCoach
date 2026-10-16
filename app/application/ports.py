@@ -41,9 +41,6 @@ if TYPE_CHECKING:
     from app.contexts.plan.adaptation.vdot_recalibrator import (
         recalibrate_zones_only as recalibrate_zones_only,
     )
-    from app.contexts.plan.generators.performance_plan_generator import (
-        PerformancePlanGenerator as PerformancePlanGenerator,
-    )
     from app.contexts.plan.plan_service import PlanService as PlanService
     from app.contexts.plan.repositories import (
         SQLAlchemyPlanRepository as SQLAlchemyPlanRepository,
@@ -53,9 +50,6 @@ if TYPE_CHECKING:
     )
     from app.contexts.runner.fitness.hr_zone_service import (
         HRZoneService as HRZoneService,
-    )
-    from app.contexts.runner.fitness.performance_service import (
-        PerformanceService as PerformanceService,
     )
     from app.contexts.runner.fitness.race_predictor_service import (
         RacePredictorService as RacePredictorService,
@@ -84,10 +78,6 @@ _LAZY: dict[str, tuple[str, str]] = {
         "app.contexts.plan.adaptation.vdot_recalibrator",
         "recalibrate_zones_only",
     ),
-    "PerformancePlanGenerator": (
-        "app.contexts.plan.generators.performance_plan_generator",
-        "PerformancePlanGenerator",
-    ),
     "PlanService": ("app.contexts.plan.plan_service", "PlanService"),
     "SQLAlchemyPlanRepository": (
         "app.contexts.plan.repositories",
@@ -100,10 +90,6 @@ _LAZY: dict[str, tuple[str, str]] = {
     "HRZoneService": (
         "app.contexts.runner.fitness.hr_zone_service",
         "HRZoneService",
-    ),
-    "PerformanceService": (
-        "app.contexts.runner.fitness.performance_service",
-        "PerformanceService",
     ),
     "RacePredictorService": (
         "app.contexts.runner.fitness.race_predictor_service",

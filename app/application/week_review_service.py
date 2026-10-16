@@ -1,10 +1,13 @@
 """Resolve the week review for a plan — which week, and what was logged in it.
 
-A plan week runs from the plan's start weekday, not necessarily Monday, so the
-review is anchored to the plan: it is "due" on the **last day** of a plan week
-(evening push, and the card appears) and stays on the page through the **first
-day** of the next, so a runner who opens the app on Monday morning still sees
-how last week landed before the new one takes over.
+Plan weeks run Monday to Sunday (every start is snapped to a Monday). The
+review is "due" on the **last day** of a plan week (evening push, and the card
+appears) and stays on the page through the **first day** of the next, so a
+runner who opens the app on Monday morning still sees how last week landed
+before the new one takes over.
+
+A runner with no run on record gets no review at all: "0 of 22 km, missed
+Mon, Wed, Thu" is a verdict on data that never arrived, not on their week.
 
 Cross-context by nature (plan weeks + the runner's logged runs), hence the
 application layer. The judgement is pure: :mod:`app.core.coaching.week_review`.
@@ -53,8 +56,14 @@ def due_review(
         return None
     if week_number > (plan.weeks_duration or 0):
         return None
+    if not _has_any_run(user_id, db):
+        return None
 
     return review_for_week(plan, user_id, db, week_number)
+
+
+def _has_any_run(user_id: str, db: Session) -> bool:
+    return db.query(RunLog.id).filter(RunLog.user_id == user_id).first() is not None
 
 
 def review_for_week(

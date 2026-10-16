@@ -26,7 +26,7 @@
                 </header>
 
                 <fieldset class="cp-field">
-                    <legend class="cp-label">Race distance</legend>
+                    <legend class="cp-label">Race goal</legend>
                     <div class="cp-segmented cp-segmented--wrap">
                         {% for km, name in road_distances %}
                         <label class="cp-seg"><input type="radio" name="target_distance" value="{{ km }}"{% if km == 21.1 %} checked{% endif %}><span>{{ name }}</span></label>
@@ -66,7 +66,7 @@
                     </label>
                     <label class="cp-field">
                         <span class="cp-label">Start date</span>
-                        <input type="date" name="start_date" id="cpStart" class="form-input">
+                        {% with field_id = 'cpStart', field_name = 'start_date', selected = none %}{% include 'components/start_week_select.html' %}{% endwith %}
                     </label>
                 </div>
 

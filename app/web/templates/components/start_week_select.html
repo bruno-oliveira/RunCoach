@@ -1,0 +1,16 @@
+{# Which Monday a plan starts on. Plans start on Mondays (see
+   TrainingPlan._snap_start_to_monday), so the runner picks a week rather than
+   a free date that would be moved behind their back.
+   Params: field_id, field_name (optional), selected (a date, optional —
+   defaults to next week). #}
+{% set this_monday = start_mondays()[0] %}
+{% set chosen = week_monday(selected) if selected else start_mondays()[1] %}
+<select {% if field_name %}name="{{ field_name }}" {% endif %}id="{{ field_id }}" class="form-select">
+    {% for monday in start_mondays(chosen) %}
+    {% set weeks_out = (monday - this_monday).days // 7 %}
+    <option value="{{ monday.isoformat() }}"{% if monday == chosen %} selected{% endif %}>
+        {%- if weeks_out == 0 %}This week · {% elif weeks_out == 1 %}Next week · {% endif -%}
+        {{ monday.strftime('%a %b') }} {{ monday.day }}
+    </option>
+    {% endfor %}
+</select>

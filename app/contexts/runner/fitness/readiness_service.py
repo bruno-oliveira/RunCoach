@@ -14,7 +14,6 @@ from app.contexts.runner.fitness.race_predictor_service import RacePredictorServ
 from app.contexts.runner.fitness.readiness_scoring import (
     build_scenarios,
     compute_weekly_volumes,
-    parse_float,
     score_consistency,
     score_label,
     score_long_run,
@@ -40,26 +39,6 @@ DISTANCE_LABELS = {
     42.2: "Marathon",
     42.195: "Marathon",
 }
-
-# Backward-compatible aliases for the private module-level functions
-# that were previously defined in this file.
-_compute_weekly_volumes = compute_weekly_volumes
-_score_volume = score_volume
-_score_consistency = score_consistency
-_score_long_run = score_long_run
-_score_taper = score_taper
-_score_vdot = score_vdot
-_build_scenarios = build_scenarios
-_parse_float = parse_float
-_score_label = score_label
-_vdot_for_goal_time = None  # re-exported below
-
-try:
-    from app.contexts.runner.fitness.readiness_scoring import vdot_for_goal_time
-
-    _vdot_for_goal_time = vdot_for_goal_time
-except ImportError:
-    pass
 
 
 def _parse_plan_targets(plan_data: list) -> tuple:

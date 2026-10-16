@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.contexts.plan.adaptation import intent_service, type_swapper
+from app.contexts.plan.adaptation import intent_service
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_creation_helpers import persist_weekly_workouts
 from app.contexts.plan.week_adjustment_service import apply_week_action, swap_week_days
@@ -201,19 +201,6 @@ def test_day_swap_moves_rows_and_cards_together(test_db, frozen_monday):
     assert _row(test_db, plan, 2, second).workout_type == type_first
     assert _row(test_db, plan, 2, first).workout_type == type_second
     assert plan.adaptation_revision == revision + 1
-
-
-def test_type_swap_cannot_touch_another_runners_workout(test_db, frozen_monday):
-    mine = _make_plan(test_db, email="me@example.com")
-    theirs = _make_plan(test_db, email="them@example.com")
-    victim = _row(test_db, theirs, 2, 2)
-    before = victim.workout_type
-
-    result = type_swapper.apply_swap(victim.id, mine.id, mine.user_id, "tempo", test_db)
-
-    assert result is None
-    test_db.refresh(victim)
-    assert victim.workout_type == before
 
 
 def test_ease_today_softens_only_today(test_db, frozen_monday):

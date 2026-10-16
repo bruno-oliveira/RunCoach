@@ -310,7 +310,7 @@
         if (!actions) return;
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn btn-ghost btn-small';
+        btn.className = 'btn btn-ghost btn-sm';
         btn.setAttribute('data-adapt-panel-undo', '');
         btn.textContent = 'Undo';
         btn.onclick = function () { btn.disabled = true; undo(); };

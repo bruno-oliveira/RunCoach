@@ -18,7 +18,11 @@ from fastapi.templating import Jinja2Templates
 
 from app.contexts.nutrition.meal_database import meal_type_label, recipe_slug
 from app.core.formatting import format_km, format_pace, format_pace_bare
-from app.core.training.periodization.plan_calendar import next_monday
+from app.core.training.periodization.plan_calendar import (
+    next_monday,
+    start_mondays,
+    week_monday,
+)
 from app.core.training.profiles.road_profile import race_name
 from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.config import settings
@@ -68,6 +72,8 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     # rendered from several places — the home route and every validation-error
     # re-render — and each of them needs the same default start date.
     tpl.env.globals["next_monday"] = next_monday
+    tpl.env.globals["start_mondays"] = start_mondays
+    tpl.env.globals["week_monday"] = week_monday
     tpl.env.filters["format_pace"] = format_pace
     tpl.env.filters["format_pace_bare"] = format_pace_bare
     tpl.env.filters["format_km"] = format_km

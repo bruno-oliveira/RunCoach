@@ -10,9 +10,7 @@ from typing import Any, Dict, Optional
 
 from app.models import TrainingPlan
 
-from . import change_reasons as _reasons
 from ._helpers import today_date
-from .change_plan_builder import empty_change_plan
 
 
 def build_signal_snapshot(signals: Dict[str, Any]) -> Dict[str, Any]:
@@ -77,44 +75,6 @@ def build_signals_summary(
     if runs_count is not None:
         out["runs_analyzed"] = runs_count
     return out
-
-
-def build_no_adjustable_weeks_result(
-    *,
-    mode: str,
-    signals: Dict[str, Any],
-    runs_count: int,
-) -> Dict[str, Any]:
-    """Shape the early-exit result when no future weeks can be adjusted.
-
-    Returned by ``_run_adjust`` when ``adjustable_weeks`` is empty — every
-    upcoming session is past the cut-off, so there's nothing to scale.
-    Surfaces the same multiplier / signals summary the modal would have
-    shown for a successful adjust, just with ``adjusted=False``.
-    """
-    cp = empty_change_plan(
-        action="adjust",
-        mode=mode,
-        headline_reason=_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
-    )
-    cp["summary"]["multiplier"] = signals["multiplier"]
-    cp["signals"] = build_signals_summary(signals, runs_count=runs_count)
-    return {
-        "adjusted": False,
-        **{
-            k: signals[k]
-            for k in (
-                "multiplier",
-                "volume_ratio",
-                "avg_effort",
-                "completion_rate",
-            )
-        },
-        "total_runs": runs_count,
-        "weeks_changed": 0,
-        "reason": _reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
-        "change_plan": cp,
-    }
 
 
 def record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:

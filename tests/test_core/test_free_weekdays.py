@@ -10,9 +10,6 @@ Tuesday back.
 import pytest
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.frequency import get_composer
 from app.core.training.periodization.recovery_block import build_recovery_block
@@ -127,28 +124,6 @@ class TestGeneratedPlans:
             40, 30.0, 16, max_runs_per_week=runs
         )
         _assert_free(plan)
-
-    @pytest.mark.parametrize("runs", _FITTING_RUNS)
-    def test_goal_time_plan(self, runs):
-        plan = PerformancePlanGenerator().generate_plan(
-            5.0, 5.6, 5.0, 10, 20, runs_per_week=runs
-        )
-        _assert_free(plan["weekly_plans"])
-
-    def test_three_run_goal_time_plan_is_monday_wednesday_saturday(self):
-        # The plan that prompted the rule: 5K, 28:00 to 25:00, 20 km a week.
-        plan = PerformancePlanGenerator().generate_plan(
-            5.0, 5.6, 5.0, 10, 20, runs_per_week=3
-        )
-        for week in plan["weekly_plans"][:-1]:
-            assert _run_days(week) == {1, 3, 6}, week["week"]
-
-    def test_six_run_goal_time_plan_gives_up_friday_and_keeps_tuesday(self):
-        plan = PerformancePlanGenerator().generate_plan(
-            5.0, 5.6, 5.0, 10, 40, runs_per_week=6
-        )
-        for week in plan["weekly_plans"]:
-            assert TUESDAY not in _run_days(week), week["week"]
 
     @pytest.mark.parametrize("runs", (2, 3, 4))
     def test_beginner_plan(self, runs):

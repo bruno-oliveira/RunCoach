@@ -1,9 +1,9 @@
-"""Plan creation, customization, and deletion business logic."""
+"""Plan creation and deletion business logic."""
 
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -228,18 +228,6 @@ class PlanService:
             raise
 
         return training_plan, plan_data
-
-    def customize_plan(
-        self,
-        training_plan: TrainingPlan,
-        week_number: int,
-        adjustment_type: str,
-        adjustment_value: str,
-        db: Session,
-    ) -> Any:
-        return _lifecycle.customize_plan(
-            training_plan, week_number, adjustment_type, adjustment_value, db
-        )
 
     def delete_plan(self, training_plan: TrainingPlan, db: Session) -> None:
         return _lifecycle.delete_plan(training_plan, db)

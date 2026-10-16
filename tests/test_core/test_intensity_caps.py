@@ -8,9 +8,6 @@ and day total inside the weekly-share ceilings.
 
 import pytest
 
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.tuning import (
     MAX_QUALITY_DAY_SHARE,
@@ -138,17 +135,3 @@ class TestGeneratedPlansRespectCaps:
         )
         for week in plan:
             _assert_week_within_caps(week, f"road-{target}")
-
-    @pytest.mark.parametrize(
-        "target,cur_pace,goal_pace,weeks,weekly",
-        [
-            (10.0, 5.5, 5.0, 10, 40.0),
-            (21.1, 5.8, 5.4, 12, 45.0),
-        ],
-    )
-    def test_performance_plans(self, target, cur_pace, goal_pace, weeks, weekly):
-        plan = PerformancePlanGenerator().generate_plan(
-            target, cur_pace, goal_pace, weeks, weekly, 5
-        )
-        for week in plan["weekly_plans"]:
-            _assert_week_within_caps(week, f"perf-{target}")

@@ -206,13 +206,6 @@ class EnvironmentalConditions:
         return " ".join(parts) if parts else None
 
 
-def adjust_vdot(vdot: float, conditions: Optional[EnvironmentalConditions]) -> float:
-    """Apply the altitude VDOT reduction, if any."""
-    if conditions is None:
-        return vdot
-    return vdot * conditions.vdot_factor()
-
-
 def adjust_seconds(
     seconds: float, conditions: Optional[EnvironmentalConditions]
 ) -> float:

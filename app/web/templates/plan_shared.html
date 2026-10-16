@@ -36,8 +36,7 @@
                 <div>
                     <h1>{{ plan_owner_display_name }}'s Training Plan</h1>
                     <p class="shared-hero-subtitle">
-                        {% if training_plan.plan_type == 'performance' %}Performance{% else %}Distance{% endif %} plan
-                        {% if training_plan.goal_time %} &middot; Goal: {{ training_plan.goal_time }}{% endif %}
+                        {{ distance_display }} Training Plan{% if training_plan.goal_time %} &middot; Goal: {{ training_plan.goal_time }}{% endif %}
                     </p>
                 </div>
             </div>
@@ -157,18 +156,6 @@
                     <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
                 </div>
             </div>
-        </div>
-
-        <div class="progress-charts-grid">
-            <div class="progress-chart-card">
-                <canvas id="weeklyMileageChart"></canvas>
-            </div>
-            <div class="progress-chart-card">
-                <canvas id="paceTrendChart"></canvas>
-            </div>
-        </div>
-        <div class="progress-donut-wrap">
-            <canvas id="completionDonutChart"></canvas>
         </div>
     </div>
     {% endif %}
@@ -820,11 +807,4 @@
         if (panel) { panel.classList.add('active'); }
     }
 </script>
-{% if progress_data and progress_data.completed_count > 0 %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script>
-    window.PROGRESS_DATA = {{ progress_data | tojson }};
-</script>
-<script src="{{ static_url('js/performance_dashboard.js') }}" defer></script>
-{% endif %}
 {% endblock %}

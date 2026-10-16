@@ -164,21 +164,6 @@
     white-space: nowrap;
 }
 
-.badge-performance {
-    background: rgba(236, 72, 153, 0.12);
-    color: #d946a8;
-}
-
-.badge-distance {
-    background: var(--color-primary-subtle);
-    color: var(--color-link);
-}
-
-.badge-fitness {
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-}
-
 .badge-auto-adapted {
     background: rgba(252, 76, 2, 0.1);
     color: #c43a00;

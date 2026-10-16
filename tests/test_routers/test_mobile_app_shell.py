@@ -98,7 +98,8 @@ class TestAppShellMarkup:
 
         html = client.get("/recipes").text
         assert 'class="tab-bar"' in html
-        assert 'data-i18n="nav.today"' in html
+        # A visitor has no "today" yet: the first tab is Home, as in the navbar.
+        assert 'data-i18n="nav.home"' in html
 
     def test_guest_home_drops_nav_links_but_public_pages_keep_them(self, client):
         assert 'class="nav-links"' not in client.get("/").text
@@ -112,13 +113,13 @@ class TestAppShellMarkup:
         assert 'data-i18n="tab.sign_in"' in bar
         # No account-only surfaces, and nothing to expand into.
         assert 'data-i18n="tab.more"' not in bar
-        assert 'href="/my-plans"' not in bar
+        assert 'href="/plan"' not in bar
         assert 'href="/coach"' not in bar
 
     def test_signed_in_tab_bar_carries_the_daily_surfaces(self, signed_in_user):
         bar = _render_tab_bar(user=signed_in_user, path="/")
 
-        assert 'href="/my-plans"' in bar
+        assert 'href="/plan"' in bar
         assert 'href="/coach"' in bar
         assert 'href="/run"' in bar
         assert 'data-i18n="tab.more"' in bar
@@ -138,7 +139,7 @@ class TestAppShellMarkup:
     def test_plan_surfaces_highlight_the_plans_tab(self, signed_in_user, path):
         bar = _render_tab_bar(user=signed_in_user, path=path)
 
-        assert 'class="tab-item is-active" href="/my-plans" aria-current="page"' in bar
+        assert 'class="tab-item is-active" href="/plan" aria-current="page"' in bar
 
     def test_anonymous_visitor_on_a_public_page_highlights_that_tab(self):
         bar = _render_tab_bar(path="/recipes")

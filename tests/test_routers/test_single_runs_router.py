@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.runner.single_runs import claim_completed_single_runs
 from app.core.time_utils import local_today
+from app.core.training.periodization.plan_calendar import week_monday
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models import (
@@ -236,7 +237,7 @@ def test_page_hands_the_form_the_planned_runs_it_could_duplicate(api, owner, tes
             TrainingPlan(
                 id="srr-plan",
                 user_id=owner.id,
-                start_date=datetime.combine(today, time.min),
+                start_date=datetime.combine(week_monday(today), time.min),
                 weeks_duration=8,
                 target_distance="10",
                 current_weekly_km=30,
@@ -246,7 +247,7 @@ def test_page_hands_the_form_the_planned_runs_it_could_duplicate(api, owner, tes
             DailyWorkout(
                 id="srr-day",
                 weekly_plan_id="srr-week",
-                day_of_week=1,
+                day_of_week=today.isoweekday(),
                 workout_type="easy",
                 distance_km=8.0,
             ),

@@ -45,18 +45,3 @@ NO_CHANGE_NO_ACTIVE_ADJUSTMENT = (
 NO_CHANGE_DISTANCES_IDENTICAL = (
     "Computed distances matched the existing plan — nothing to change."
 )
-
-
-def protected_reason_for_workout(
-    workout_type: str | None, has_key_workout_id: bool
-) -> str:
-    """Return the protection reason for a skipped workout."""
-    if has_key_workout_id:
-        return PROTECTED_KEY_WORKOUT
-    if workout_type == "tempo":
-        return PROTECTED_TEMPO
-    if workout_type == "interval":
-        return PROTECTED_INTERVAL
-    if workout_type == "hill":
-        return PROTECTED_HILL
-    return PROTECTED_KEY_WORKOUT

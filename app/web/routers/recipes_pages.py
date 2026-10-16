@@ -40,7 +40,6 @@ def recipes_page(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id,
-            "current_page": "recipes",
             "recipe_total": len(meal_db.meals),
         },
     )
@@ -100,6 +99,5 @@ def recipe_detail(
             "is_favorite": is_favorite,
             "favorite_id": favorite_id,
             "google_client_id": settings.google_client_id,
-            "current_page": "recipes",
         },
     )

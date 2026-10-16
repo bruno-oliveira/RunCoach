@@ -1,7 +1,7 @@
 """Smoke tests: one authenticated success + one 401 per router.
 
 Covers routers that previously had no test coverage:
-runs, performance, adaptive, recipes.
+runs, adaptive, recipes.
 """
 
 from datetime import timedelta
@@ -68,20 +68,6 @@ def _clear_user():
 
 @pytest.mark.usefixtures("_override_db")
 class TestRunsRouter:
-    def test_get_runs_authenticated(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get("/api/runs")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "runs" in data
-
-    def test_get_runs_unauthenticated(self):
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/api/runs")
-        assert resp.status_code == 401
-
     def test_create_run_authenticated(self, smoke_user):
         _set_user(smoke_user)
         with TestClient(app) as c:
@@ -105,22 +91,6 @@ class TestRunsRouter:
                 },
             )
         assert resp.status_code == 401
-
-
-# ---------------------------------------------------------------------------
-# Performance router  (/performance-training, /api/performance)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestPerformanceRouter:
-    def test_performance_page_renders(self):
-        """Performance page uses get_optional_user — should render without auth."""
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/performance-training")
-        assert resp.status_code == 200
-        assert "text/html" in resp.headers["content-type"]
 
 
 # ---------------------------------------------------------------------------
@@ -158,98 +128,6 @@ class TestRecipesRouter:
 # ---------------------------------------------------------------------------
 # Time-goal plan generation  (/generate-plan with plan_mode=time)
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestTimeGoalPlan:
-    def test_time_goal_plan_generates_successfully(self, smoke_user):
-        """Time-goal plan should redirect to the new plan on success."""
-        _set_user(smoke_user)
-        app.dependency_overrides[get_optional_user] = lambda: smoke_user
-        try:
-            with TestClient(app) as c:
-                resp = c.post(
-                    "/generate-plan",
-                    data={
-                        "current_km": 30.0,
-                        "target_distance": "10",
-                        "weeks": 8,
-                        "max_runs_per_week": 4,
-                        "plan_mode": "time",
-                        "goal_time_required": "50:00",
-                        "current_time": "55:00",
-                    },
-                    follow_redirects=False,
-                )
-            assert resp.status_code == 303
-            assert resp.headers["location"].startswith("/plan/")
-        finally:
-            app.dependency_overrides.pop(get_optional_user, None)
-
-    def test_time_goal_plan_requires_auth(self):
-        """Time-goal plan without auth should return auth_required error."""
-        _clear_user()
-        app.dependency_overrides[get_optional_user] = lambda: None
-        try:
-            with TestClient(app) as c:
-                resp = c.post(
-                    "/generate-plan",
-                    data={
-                        "current_km": 30.0,
-                        "target_distance": "10",
-                        "weeks": 8,
-                        "max_runs_per_week": 4,
-                        "plan_mode": "time",
-                        "goal_time_required": "50:00",
-                    },
-                )
-            assert resp.status_code == 200
-            assert "logged-in" in resp.text.lower() or "auth" in resp.text.lower()
-        finally:
-            app.dependency_overrides.pop(get_optional_user, None)
-
-    @pytest.mark.parametrize(
-        ("distance", "current_km", "current_time", "goal_time", "required_km"),
-        [
-            ("5", 10.0, "27:30", "25:00", 20),
-            ("10", 10.0, "55:00", "50:00", 25),
-            ("21.1", 20.0, "1:56:03", "1:45:30", 35),
-            ("42.2", 30.0, "3:52:06", "3:31:00", 50),
-        ],
-    )
-    def test_time_goal_plan_enforces_performance_base_in_live_route(
-        self,
-        smoke_user,
-        test_db,
-        distance,
-        current_km,
-        current_time,
-        goal_time,
-        required_km,
-    ):
-        """The unified form must not bypass PerformancePlanRequest."""
-        _set_user(smoke_user)
-        app.dependency_overrides[get_optional_user] = lambda: smoke_user
-        before = test_db.query(TrainingPlan).count()
-        try:
-            with TestClient(app) as c:
-                resp = c.post(
-                    "/generate-plan",
-                    data={
-                        "current_km": current_km,
-                        "target_distance": distance,
-                        "weeks": 8,
-                        "max_runs_per_week": 4,
-                        "plan_mode": "time",
-                        "goal_time_required": goal_time,
-                        "current_time": current_time,
-                    },
-                )
-            assert resp.status_code == 200
-            assert f"{required_km} km/week" in resp.text
-            assert test_db.query(TrainingPlan).count() == before
-        finally:
-            app.dependency_overrides.pop(get_optional_user, None)
 
 
 # ---------------------------------------------------------------------------
@@ -495,3 +373,41 @@ class TestSetupWatchPage:
             resp = c.get("/setup/watch?return_to=/plan/abc")
         assert resp.status_code == 200
         assert "/plan/abc" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# /plan — the navigation's "Plan"
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestPlanShortcut:
+    def test_opens_the_plan_in_progress(self, smoke_user, test_db):
+        test_db.add(
+            TrainingPlan(
+                id="nav-plan",
+                user_id=smoke_user.id,
+                current_weekly_km=30,
+                target_distance="10",
+                weeks_duration=8,
+                start_date=local_today() - timedelta(weeks=1),
+            )
+        )
+        test_db.commit()
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/plan", follow_redirects=False)
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+        assert resp.status_code == 302
+        assert resp.headers["location"] == "/plan/nav-plan"
+
+    def test_without_a_plan_in_progress_lists_every_plan(self, smoke_user):
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/plan", follow_redirects=False)
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+        assert resp.headers["location"] == "/my-plans"

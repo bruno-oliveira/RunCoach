@@ -14,7 +14,6 @@ from . import (
     plan_adjuster,
     proactive_nudge,
     run_mapper,
-    type_swapper,  # noqa: F401  (re-exported for callers: adaptation.type_swapper)
 )
 from .performance_analyzer import analyze_performance as _analyze_performance
 from .skipped_detector import detect_skipped_workouts as _detect_skipped

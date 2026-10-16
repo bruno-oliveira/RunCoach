@@ -180,8 +180,11 @@ def seed(target: Path, weeks_in: int) -> str:
     plan["id"] = PLAN_ID
     plan["user_id"] = USER_ID
     plan["created_at"] = now.isoformat(sep=" ")
+    # Raw SQL skips the model's Monday rule, so apply it here: plans start on
+    # the Monday of their week (TrainingPlan._snap_start_to_monday).
+    this_monday = date.today() - timedelta(days=date.today().weekday())
     plan["start_date"] = (
-        datetime.combine(date.today(), datetime.min.time())
+        datetime.combine(this_monday, datetime.min.time())
         - timedelta(days=7 * weeks_in)
     ).isoformat(sep=" ")
     plan["share_token"] = None

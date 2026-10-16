@@ -422,29 +422,6 @@
     opacity: 0.9;
 }
 
-/* ---- Progress Charts ---- */
-.progress-charts-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-6);
-    margin-top: var(--space-6);
-}
-
-.progress-chart-card {
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-}
-
-.progress-donut-wrap {
-    max-width: 280px;
-    margin: var(--space-6) auto 0;
-}
-
-@media (max-width: 640px) {
-    .progress-charts-grid { grid-template-columns: 1fr; }
-}
-
 /* ---- Warning Cards ---- */
 .warning-card {
     background: var(--color-warning-subtle);
@@ -847,12 +824,10 @@
 
     .plan-start-banner { padding: var(--space-4); margin-bottom: var(--space-4); }
     .plan-start-banner-controls { flex-direction: column; }
-    .plan-start-banner-controls input[type="date"] { width: 100%; }
+    .plan-start-banner-controls select { width: 100%; }
 
     .download-section { flex-direction: column; align-items: stretch; }
     .download-section .btn { width: 100%; }
-
-    .progress-donut-wrap { max-width: 200px; }
 }
 
 @media (max-width: 480px) {
