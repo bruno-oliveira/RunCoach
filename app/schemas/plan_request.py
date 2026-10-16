@@ -648,6 +648,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         if self.custom_spec is None:
             return self
         from app.core.training.custom_plan import validate_spec
+        from app.core.training.frequency import viable_run_frequency
         from app.core.training.profiles.trail_profile import classify_trail
 
         if self.is_backyard or self.current_km == 0:
@@ -664,9 +665,11 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             if self.is_trail
             else None
         )
+        # The grid of the frequency the generator will run, which a small
+        # weekly base lowers: a 5-run spec on a 4-run plan fills nothing.
         problems = validate_spec(
             spec,
-            runs_per_week=self.max_runs_per_week,
+            runs_per_week=viable_run_frequency(self.current_km, self.max_runs_per_week),
             target_distance=self.target_distance,
             trail_profile=trail_profile,
             terrain=self.resolved_training_terrain(),

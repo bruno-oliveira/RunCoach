@@ -87,6 +87,69 @@ def test_options_bound_each_cell_by_the_plan_length(client):
     assert short_plan[("build", "long")] < 5
 
 
+def test_options_lay_out_the_phases_the_limits_come_from(client):
+    data = client.get(
+        "/api/custom-plans/options",
+        params={"target_distance": 42.2, "max_runs_per_week": 4, "weeks": 14},
+    ).json()
+    shape = data["shape"]
+    assert [s["phase"] for s in shape] == ["base", "build", "peak", "taper"]
+    assert sum(s["weeks"] for s in shape) == 14
+    assert shape[-1]["training_weeks"] == 0
+    training = {s["phase"]: s["training_weeks"] for s in shape}
+    for cell in data["cells"]:
+        assert cell["training_weeks"] == training[cell["phase"]]
+        assert cell["limit"] == min(5, training[cell["phase"]])
+
+
+def test_options_follow_the_frequency_the_base_can_carry(client):
+    # 12 km over 5 runs is under 2.5 km a run: the generator plans 4, so the
+    # builder offers the 4-run grid and says why.
+    data = client.get(
+        "/api/custom-plans/options",
+        params={
+            "target_distance": 5.0,
+            "max_runs_per_week": 5,
+            "weeks": 10,
+            "current_km": 12,
+        },
+    ).json()
+    assert data["requested_runs_per_week"] == 5
+    assert data["runs_per_week"] == 4
+    assert ("build", "quality") in {(c["phase"], c["slot"]) for c in data["cells"]}
+    assert data["blocker"] is None
+
+
+def test_options_say_when_the_basics_cannot_make_a_plan(client):
+    data = client.get(
+        "/api/custom-plans/options",
+        params={
+            "target_distance": 21.1,
+            "max_runs_per_week": 4,
+            "weeks": 14,
+            "current_km": 10,
+        },
+    ).json()
+    assert "below the recommended minimum" in data["blocker"]["message"]
+    assert data["blocker"]["suggestion"]
+
+
+def test_preview_validates_against_the_frequency_the_plan_runs(client):
+    body = _basics(
+        current_km=12,
+        target_distance=5.0,
+        weeks=10,
+        max_runs_per_week=5,
+        custom_spec=_spec(runs=4, dist=5.0),
+    )
+    response = client.post("/api/custom-plans/preview", json=body, headers=ORIGIN)
+    assert response.status_code == 200, response.json()
+    # A spec for the 5-run grid fills cells the 4-run plan never reads.
+    body["custom_spec"] = _spec(runs=5, dist=5.0)
+    response = client.post("/api/custom-plans/preview", json=body, headers=ORIGIN)
+    assert response.status_code == 422
+
+
 def test_preview_names_the_strength_sessions(client):
     spec = _spec()
     spec["strength"] = {"sessions_per_week": 2, "template": "climb_descent"}

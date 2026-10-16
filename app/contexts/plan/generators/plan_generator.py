@@ -46,7 +46,11 @@ from app.core.training.custom_plan import (
     CustomPlanSpec,
     CustomRotation,
 )
-from app.core.training.frequency import get_composer
+from app.core.training.frequency import (
+    MIN_RUNNING_DAYS,  # noqa: F401 — re-exported for callers of the generator
+    get_composer,
+)
+from app.core.training.frequency import viable_run_frequency as _viable_run_frequency
 from app.core.training.periodization import mileage_progression
 from app.core.training.periodization.phase_calculator import calculate_phases
 from app.core.training.periodization.strength_plan import derive_experience_level
@@ -69,24 +73,6 @@ from app.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Floor on running days: a real training week still wants a long run, a quality
-# session, and an easy run, so frequency is never reduced below this.
-MIN_RUNNING_DAYS = 3
-
-
-def _viable_run_frequency(current_km: float, max_runs: int) -> int:
-    """Reduce running frequency when the weekly budget can't fill every run.
-
-    Keeps each run at or above :data:`MIN_VIABLE_RUN_KM` where possible, without
-    ever dropping below :data:`MIN_RUNNING_DAYS`. Returns ``max_runs`` unchanged
-    for any adequately-resourced plan.
-    """
-    runs = max_runs
-    while runs > MIN_RUNNING_DAYS and current_km / runs < MIN_VIABLE_RUN_KM:
-        runs -= 1
-    return runs
-
 
 # A delivered peak this far below the modelled target peak is worth a log line.
 # Below it the gap is rounding and per-run cap interaction; above it the model

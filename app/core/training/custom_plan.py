@@ -86,6 +86,58 @@ def slot_grid(runs_per_week: int) -> Dict[str, Tuple[SlotKind, ...]]:
     }
 
 
+@dataclass(frozen=True)
+class PhaseSpan:
+    """One phase of the plan as the builder draws it: where it sits, how long.
+
+    ``training_weeks`` are the weeks a cell's choices actually fill; the
+    phase's recovery weeks keep the engine's easy long run and drop the quality
+    day, and every taper week is the engine's.
+    """
+
+    phase: str
+    first_week: int
+    weeks: int
+    recovery_weeks: Tuple[int, ...]
+
+    @property
+    def last_week(self) -> int:
+        return self.first_week + self.weeks - 1
+
+    @property
+    def training_weeks(self) -> int:
+        return 0 if self.phase == "taper" else self.weeks - len(self.recovery_weeks)
+
+
+def plan_shape(
+    weeks: int, *, target_distance: float, trail_profile=None
+) -> List[PhaseSpan]:
+    """The plan's phases in order, taper included, with their recovery weeks.
+
+    Raises ``InsufficientTimeException`` (from ``calculate_phases``) for a plan
+    too short to periodise.
+    """
+    phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
+    recovery = recovery_week_set(phases)
+    spans: List[PhaseSpan] = []
+    start = 1
+    for phase in (*CUSTOM_PHASES, "taper"):
+        length = phases.get(phase, 0)
+        if length <= 0:
+            continue
+        span = range(start, start + length)
+        spans.append(
+            PhaseSpan(
+                phase=phase,
+                first_week=start,
+                weeks=length,
+                recovery_weeks=tuple(w for w in span if w in recovery),
+            )
+        )
+        start += length
+    return spans
+
+
 def phase_loading_weeks(
     weeks: int, *, target_distance: float, trail_profile=None
 ) -> Dict[str, int]:
@@ -95,14 +147,12 @@ def phase_loading_weeks(
     engine's easy long run and drops the quality day), so these are the weeks
     a cell's rotation actually walks through.
     """
-    phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
-    recovery = recovery_week_set(phases)
-    counts: Dict[str, int] = {}
-    start = 1
-    for phase in CUSTOM_PHASES:
-        span = range(start, start + phases[phase])
-        counts[phase] = sum(1 for week in span if week not in recovery)
-        start += phases[phase]
+    counts = {phase: 0 for phase in CUSTOM_PHASES}
+    for span in plan_shape(
+        weeks, target_distance=target_distance, trail_profile=trail_profile
+    ):
+        if span.phase in counts:
+            counts[span.phase] = span.training_weeks
     return counts
 
 

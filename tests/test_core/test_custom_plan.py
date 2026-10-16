@@ -20,10 +20,12 @@ from app.core.training.custom_plan import (
     cell_limits,
     default_spec,
     eligible_options,
+    plan_shape,
     rewrite_distribution,
     slot_grid,
     validate_spec,
 )
+from app.core.training.frequency import MIN_RUNNING_DAYS, viable_run_frequency
 from app.core.training.periodization.phase_calculator import (
     calculate_phases,
     recovery_week_set,
@@ -363,3 +365,25 @@ def test_a_stand_in_choice_does_not_stand_in_twice():
         if d["type"] in ("interval", "tempo", "hill")
     ]
     assert all(a != b for a, b in zip(build, build[1:])), build
+
+
+@pytest.mark.parametrize("weeks", [6, 9, 14, 18, 24])
+@pytest.mark.parametrize("distance", [5.0, 21.1, 42.2])
+def test_plan_shape_tiles_the_plan_with_the_phases_and_their_deloads(weeks, distance):
+    if distance == 42.2 and weeks < 12:
+        pytest.skip("below the marathon floor")
+    spans = plan_shape(weeks, target_distance=distance)
+    phases = calculate_phases(weeks, distance)
+    assert [s.phase for s in spans] == [p for p in phases if phases[p] > 0]
+    assert spans[0].first_week == 1 and spans[-1].last_week == weeks
+    for before, after in zip(spans, spans[1:]):
+        assert after.first_week == before.last_week + 1
+    recovery = {w for s in spans for w in s.recovery_weeks}
+    assert recovery == set(recovery_week_set(phases))
+    assert spans[-1].phase == "taper" and spans[-1].training_weeks == 0
+
+
+def test_a_small_base_sheds_running_days_but_never_below_three():
+    assert viable_run_frequency(40, 5) == 5
+    assert viable_run_frequency(12, 5) == 4
+    assert viable_run_frequency(5, 6) == MIN_RUNNING_DAYS
