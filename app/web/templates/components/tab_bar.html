@@ -9,15 +9,15 @@
    public surfaces plus a sign-in action — `triggerGoogleSignIn()` and
    `connectWatch()` already live in nav.js.
 
-   Active state is derived from the request path rather than a per-route
-   `current_page`, because the plan pages (`/plan/<id>`) belong to the Plans
-   tab without any route having to remember to say so.
+   Active state is derived from the request path, as in the navbar, because
+   the plan pages (`/plan/<id>`) belong to the Plan tab without any route
+   having to remember to say so.
    ========================================================================= #}
 
-{% macro render(user=None, path='/', active_plan_id=None) %}
+{% macro render(user=None, path='/') %}
 {% set path = path or '/' %}
 {% set is_home    = path == '/' %}
-{% set is_plans   = path.startswith('/my-plans') or path.startswith('/plan/') or path.startswith('/plans/') %}
+{% set is_plans   = path.startswith('/my-plans') or path.startswith('/plan') %}
 {% set is_coach   = path.startswith('/coach') %}
 {% set is_run     = path.startswith('/run') %}
 {% set is_recipes = path.startswith('/recipes') %}
@@ -34,14 +34,14 @@
                     <path d="M3 10.4 12 3.4l9 7"/>
                     <path d="M5.5 9.8V20.5h13V9.8"/>
                 </svg>
-                <span class="tab-label" data-i18n="nav.today">Today</span>
+                {% if user %}<span class="tab-label" data-i18n="nav.today">Today</span>{% else %}<span class="tab-label" data-i18n="nav.home">Home</span>{% endif %}
             </a>
         </li>
 
         {% if user %}
         <li>
             <a class="tab-item {{ 'is-active' if is_plans else '' }}"
-               href="{{ '/plan/' ~ active_plan_id if active_plan_id else '/my-plans' }}"
+               href="/plan"
                {% if is_plans %}aria-current="page"{% endif %}>
                 <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -76,10 +76,17 @@
     </div>
     {% endif %}
 
-    {# Filled by readiness_checkin.js — the same module the Coach hub uses, so
-       there is one check-in implementation, not two. #}
-    <div class="today-card-checkin readiness-checkin readiness-checkin--embedded"
-         id="readinessCheckinCard" style="display:none;"></div>
+    {# Folded to one line, as on the home page: the form is a few taps the
+       runner chooses to make, not a wall between today's session and the week.
+       Filled by readiness_checkin.js — one check-in implementation, not two. #}
+    <details class="today-card-checkin-fold">
+        <summary>
+            {% if today_card.readiness_label %}<span>{{ today_card.readiness_label }}</span>{% else %}<span data-i18n="home.checkin_prompt">How are you feeling today?</span>{% endif %}
+            <span data-i18n="home.checkin_action">Check in</span>
+        </summary>
+        <div class="today-card-checkin readiness-checkin readiness-checkin--embedded"
+             id="readinessCheckinCard" style="display:none;"></div>
+    </details>
 
     {% include 'components/watch_mirror.html' %}
 </section>

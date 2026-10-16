@@ -1,6 +1,10 @@
 {# `show_links` is off for a visitor on the landing page: that page has one job
    (build a plan), and it carries its own connect button further down. #}
-{% macro render(user=None, show_logo=True, current_page='', show_links=True) %}
+{% macro render(user=None, show_logo=True, path='/', show_links=True) %}
+{# Active state comes from the path, as in the tab bar, so no route has to
+   remember to say which section it belongs to. #}
+{% set path = path or '/' %}
+{% set section = 'home' if path == '/' else 'plan' if (path.startswith('/plan') or path.startswith('/my-plans')) else path.strip('/').split('/')[0] %}
 <nav class="navbar" id="mainNav">
     <div class="nav-container">
         {% if show_logo %}
@@ -21,14 +25,18 @@
         <div class="nav-menu" id="navMenu">
             {% if show_links %}
             <ul class="nav-links">
-                <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}" data-i18n="nav.home">Home</a></li>
-                <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}" data-i18n="nav.recipes">Recipes</a></li>
-                <li><a href="/tips" class="nav-link {{ 'is-active' if current_page == 'tips' else '' }}" data-i18n="nav.tips">Tips</a></li>
+                {# The same places, in the same order, as the phone's tab bar. #}
                 {% if user %}
-                <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}" data-i18n="nav.my_plans">My Plans</a></li>
-                <li><a href="/plans/custom/new" class="nav-link {{ 'is-active' if current_page == 'custom_plan' else '' }}" data-i18n="nav.custom_plan">Build a Plan</a></li>
-                <li><a href="/run" class="nav-link {{ 'is-active' if current_page == 'run' else '' }}" data-i18n="nav.run">Run</a></li>
-                <li><a href="/coach" class="nav-link {{ 'is-active' if current_page == 'coach' else '' }}" data-i18n="nav.coach">Coach</a></li>
+                <li><a href="/" class="nav-link {{ 'is-active' if section == 'home' else '' }}" data-i18n="nav.today">Today</a></li>
+                <li><a href="/plan" class="nav-link {{ 'is-active' if section == 'plan' else '' }}" data-i18n="nav.plan">Plan</a></li>
+                <li><a href="/coach" class="nav-link {{ 'is-active' if section == 'coach' else '' }}" data-i18n="nav.coach">Coach</a></li>
+                <li><a href="/run" class="nav-link {{ 'is-active' if section == 'run' else '' }}" data-i18n="nav.run">Run</a></li>
+                {% else %}
+                <li><a href="/" class="nav-link {{ 'is-active' if section == 'home' else '' }}" data-i18n="nav.home">Home</a></li>
+                {% endif %}
+                <li><a href="/recipes" class="nav-link {{ 'is-active' if section == 'recipes' else '' }}" data-i18n="nav.recipes">Recipes</a></li>
+                <li><a href="/tips" class="nav-link {{ 'is-active' if section == 'tips' else '' }}" data-i18n="nav.tips">Tips</a></li>
+                {% if user %}
                 {% if user.intervals_athlete_id %}
                 <li class="nav-item-provider">
                     <button
@@ -92,10 +100,10 @@
                     </div>
                 </li>
                 {% else %}
-                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your watch</a></li>
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your runs</a></li>
                 {% endif %}
                 {% else %}
-                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your watch</a></li>
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your runs</a></li>
                 {% endif %}
             </ul>
             {% endif %}

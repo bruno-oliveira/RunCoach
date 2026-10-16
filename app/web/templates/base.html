@@ -116,22 +116,14 @@
     {% from "components/nav.html" import render as nav %}
     <!-- Navigation -->
     {% block navigation %}
-    {{ nav(user=user, current_page=current_page, show_links=user or request.url.path != '/') }}
+    {{ nav(user=user, path=request.url.path, show_links=user or request.url.path != '/') }}
     {% endblock %}
 
     <!-- Bottom tab bar — the primary navigation on a phone (mobile-app.css) -->
     {% block tabbar %}
     {% if user or request.url.path != '/' %}
     {% from "components/tab_bar.html" import render as tab_bar %}
-    {% set primary_plan_id = None %}
-    {% if current_plan is defined and current_plan %}
-        {% set primary_plan_id = current_plan.id %}
-    {% elif training_plan is defined and training_plan %}
-        {% set primary_plan_id = training_plan.id %}
-    {% elif page is defined and page.goal is defined and page.goal %}
-        {% set primary_plan_id = page.goal.plan_id %}
-    {% endif %}
-    {{ tab_bar(user=user, path=request.url.path if request else '/', active_plan_id=primary_plan_id) }}
+    {{ tab_bar(user=user, path=request.url.path if request else '/') }}
     {% endif %}
     {% endblock %}
 

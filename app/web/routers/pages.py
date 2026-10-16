@@ -47,7 +47,7 @@ from app.core.training.workouts.single_run import (
 )
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.infrastructure.config import settings
-from app.models import User
+from app.models import TrainingPlan, User
 from app.web.templating import templates
 
 router = APIRouter(tags=["pages"])
@@ -151,7 +151,6 @@ def tips_page(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
-            "current_page": "tips",
             "trail_fuel_ideas": generate_trail_fuel_ideas(),
             "trail_fuel_phases": TRAIL_FUEL_PHASES,
             "trail_tips": generate_trail_nutrition_tips(),
@@ -180,7 +179,6 @@ def single_run_page(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
-            "current_page": "run",
             "today": today,
             "has_plan": in_progress_plan(plans, today) is not None,
             # Sizing by time needs a pace to convert with; the form disables
@@ -272,17 +270,35 @@ def today(
     one tap away from it. Anyone without a running plan gets the home page,
     which is the right place to start one.
     """
-    if current_user is not None:
-        plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
-        statuses = plan_statuses(plans, local_today())
-        plan = current_active_plan(plans, statuses)
-        if (
-            plan is not None
-            and plan.start_date is not None
-            and not statuses[plan.id].completed
-        ):
-            return RedirectResponse(f"/plan/{plan.id}#today-card", status_code=302)
+    plan = _plan_in_progress(current_user, db) if current_user else None
+    if plan is not None and plan.start_date is not None:
+        return RedirectResponse(f"/plan/{plan.id}#today-card", status_code=302)
     return RedirectResponse("/", status_code=302)
+
+
+@router.get("/plan", include_in_schema=False)
+def plan(
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The "Plan" in the navigation: the plan in progress, else every plan.
+
+    One address for the navbar and the tab bar alike, so neither has to know
+    which plan the page it sits on happens to be about.
+    """
+    current = _plan_in_progress(current_user, db) if current_user else None
+    if current is not None:
+        return RedirectResponse(f"/plan/{current.id}", status_code=302)
+    return RedirectResponse("/my-plans", status_code=302)
+
+
+def _plan_in_progress(user: User, db: Session) -> Optional[TrainingPlan]:
+    plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(user.id)
+    statuses = plan_statuses(plans, local_today())
+    current = current_active_plan(plans, statuses)
+    if current is None or statuses[current.id].completed:
+        return None
+    return current
 
 
 _SERVICE_WORKER = Path(__file__).resolve().parents[1] / "static" / "js" / "sw.js"

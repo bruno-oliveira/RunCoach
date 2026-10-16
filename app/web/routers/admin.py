@@ -45,7 +45,6 @@ def admin_console(
         {
             "request": request,
             "user": admin_user,
-            "current_page": "admin",
             "plan_options": plan_options,
             "intervals_connected": bool(admin_user.intervals_athlete_id),
         },

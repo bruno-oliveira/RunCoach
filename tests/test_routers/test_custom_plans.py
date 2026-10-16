@@ -37,15 +37,14 @@ def test_builder_page_renders(client):
     assert "Build your own plan" in response.text
 
 
-def test_signed_in_navbar_links_to_the_builder():
+def test_the_builder_sits_under_plan_in_the_navbar():
     template = create_templates().env.from_string(
         '{% from "components/nav.html" import render as nav %}'
-        "{{ nav(user=user, current_page='custom_plan') }}"
+        "{{ nav(user=user, path='/plans/custom/new') }}"
     )
     user = SimpleNamespace(id="u1", name="Nav", intervals_athlete_id=None)
     html = template.render(user=user)
-    assert 'href="/plans/custom/new" class="nav-link is-active"' in html
-    assert 'data-i18n="nav.custom_plan"' in html
+    assert 'href="/plan" class="nav-link is-active"' in html
 
 
 def test_options_follow_the_frequency(client):

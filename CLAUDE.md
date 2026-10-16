@@ -112,7 +112,7 @@ app/
 │   └── race/
 ├── contexts/            # Bounded contexts: business logic + per-context repositories
 │   ├── plan/            # Generation, adaptation, view, lifecycle, adjustments
-│   │   ├── generators/  # road / beginner / performance plan generators
+│   │   ├── generators/  # road / beginner plan generators
 │   │   └── adaptation/  # signals, evaluators, adjusters, backtest harness
 │   ├── runner/          # fitness/ enrichment/ wellness/ single_runs/ (+ queries.py)
 │   ├── nutrition/
@@ -219,8 +219,16 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   `plan_validator.py` are the post-generation sanity checks.
   **Tuesday and Friday carry no run** — `FREE_WEEKDAYS` in
   `core/training/tuning.py`, read by every day-placement site (the week
-  scheduler, the performance and beginner generators, the recovery block)
-  because each used to own a day table and they disagreed. Five runs fit; a
+  scheduler, the beginner generator, the recovery block) because each used
+  to own a day table and they disagreed.
+  **Plans start on Mondays.** A workout's `day` is an ISO weekday (1 = Monday)
+  while weeks are counted from `start_date`, so the two only agree on a
+  Monday start — a Friday start once put Monday's session on the watch on
+  Friday while the today card showed Friday's rest. `TrainingPlan` snaps every
+  `start_date` to its week's Monday (`@validates`, via
+  `plan_calendar.week_monday`), so no input path can break it; the forms offer
+  a choice of Mondays (`components/start_week_select.html`). Test fixtures
+  that place a plan relative to "today" must anchor on `week_monday(today)`. Five runs fit; a
   six-run week gives Friday back and keeps Tuesday. Backyard is the exception
   from five runs up, and on the eve of its Saturday start: the simulation owns
   the whole weekend, so the scheduler is told Sunday is reserved.
@@ -275,7 +283,7 @@ Routers should carry no raw `db.query` — there is one remaining exception in
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:
   `run_mapper` (match logged runs to planned days), `performance_analyzer`,
-  `skipped_detector`, `plan_adjuster` / `week_adjuster`, `type_swapper`,
+  `skipped_detector`, `plan_adjuster` / `week_adjuster`,
   `vdot_recalibrator`, `safety.py` + `clamps.py` (guardrails), `proactive_nudge`.
   `backtest.py` replays history against the engine — use it when tuning.
 
@@ -388,6 +396,18 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   honest about them. The page is server-rendered (`templates/coach.html`), words each
   finding itself, and keeps every number outside the `data-i18n` element so a
   translation cannot swallow it. No score, no chart library.
+  With no run on record there is no verdict at all — not on the goal, and
+  not in the week review either (`week_review_service.due_review`): a runner
+  who has not connected yet is not "missing every session". The goal-time
+  finding, race readiness and the gap analysis all ask "is the goal in reach?"
+  through one function, `race_predictor.vdot_needed_for`, with the runner's
+  calibration applied, so the three cannot disagree.
+
+- **Navigation** — the navbar and the phone's tab bar list the same places in
+  the same order (Today · Plan · Coach · Run, then Recipes · Tips), and both
+  derive the active item from the path. "Plan" links to `/plan`, which
+  redirects to the plan in progress or to My Plans; the custom-plan builder
+  lives under it, reached from the plan form and My Plans.
 
 - **Watch mirroring** — `application/watch_sync_service.py` keeps the
   Intervals.icu calendar a *mirror* of the plan, not a log of what was once
