@@ -124,7 +124,7 @@ def test_in_progress_skips_a_newer_plan_that_has_not_started():
     # nudge and the morning brief must keep talking about the running one.
     running = _plan("running", start_date=TODAY - timedelta(weeks=2), weeks_duration=8)
     unstarted = _plan("next", weeks_duration=10)
-    future = _plan("later", start_date=TODAY + timedelta(days=5), weeks_duration=10)
+    future = _plan("later", start_date=TODAY + timedelta(weeks=1), weeks_duration=10)
 
     assert in_progress_plan([unstarted, future, running], TODAY) is running
 
