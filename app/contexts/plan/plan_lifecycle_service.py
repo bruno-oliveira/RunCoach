@@ -1,4 +1,4 @@
-"""Plan lifecycle operations — limit checking, customization, deletion."""
+"""Plan lifecycle operations — limit checking and deletion."""
 
 import logging
 from datetime import date, datetime
@@ -16,12 +16,6 @@ from app.models import (
     WeeklyPlan,
 )
 
-from .plan_adjustments import (
-    adjust_distance,
-    adjust_intensity,
-    apply_ai_suggestions,
-    swap_workout,
-)
 from .repositories import SQLAlchemyPlanRepository
 
 logger = logging.getLogger(__name__)
@@ -40,51 +34,6 @@ def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
     start = plan.start_date
     start_d = start.date() if isinstance(start, datetime) else start
     return plan_has_ended(start_d, plan.weeks_duration, today)
-
-
-def customize_plan(
-    training_plan: TrainingPlan,
-    week_number: int,
-    adjustment_type: str,
-    adjustment_value: str,
-    db: Session,
-) -> list[dict]:
-    plan_data = training_plan.plan_data if training_plan.plan_data else []
-
-    # Pace zones let the structured builders inject the runner's actual paces
-    # when regenerating a customised workout (falls back to generic cues).
-    try:
-        from app.contexts.plan.adaptation.reconcile import pace_zones_for
-
-        pace_zones = pace_zones_for(training_plan)
-    except Exception:  # pragma: no cover - defensive; never block customize
-        pace_zones = None
-
-    if adjustment_type == "intensity":
-        plan_data = adjust_intensity(
-            plan_data, week_number, adjustment_value, pace_zones
-        )
-    elif adjustment_type == "workout_swap":
-        plan_data = swap_workout(plan_data, week_number, adjustment_value, pace_zones)
-    elif adjustment_type == "distance":
-        plan_data = adjust_distance(plan_data, week_number, float(adjustment_value))
-    elif adjustment_type == "ai_suggest":
-        plan_data = apply_ai_suggestions(
-            plan_data, week_number, adjustment_value, pace_zones
-        )
-
-    customization = PlanCustomization(
-        training_plan_id=training_plan.id,
-        week_number=week_number,
-        adjustment_type=adjustment_type,
-        adjustment_value=adjustment_value,
-    )
-    db.add(customization)
-
-    training_plan.plan_data = plan_data
-    db.commit()
-
-    return plan_data
 
 
 def delete_plan(training_plan: TrainingPlan, db: Session) -> None:

@@ -13,20 +13,15 @@ from types import SimpleNamespace
 import pytest
 
 from app.contexts.plan.adaptation.reconcile import pace_zones_for
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_service import PlanService
-from app.contexts.plan.plan_type_registry import _current_week_pace_zones
-from app.core.time_utils import local_today, utcnow_naive
+from app.core.time_utils import utcnow_naive
 from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.physiology.zone_calculator import calculate_zones
 from app.core.training.workouts.key_workout_library.builders import (
     _KEY_WORKOUT_STEP_BUILDERS,
 )
-from app.core.training.workouts.workout_steps import _parse_pace_str_to_min_per_km
 from app.models import RunLog, User
 from app.schemas.plan_request import PlanRequest
 
@@ -40,13 +35,6 @@ def _work_steps(workout: dict) -> list[dict]:
     return [s for s in workout.get("steps", []) if s["kind"] == "run"]
 
 
-@pytest.fixture(scope="module")
-def time_goal_plan() -> dict:
-    return PerformancePlanGenerator().generate_plan(
-        5.0, CURRENT_PACE, GOAL_PACE, 8, 20, runs_per_week=4, max_heart_rate=185
-    )
-
-
 class TestGoalPaceSession:
     def test_5k_goal_pace_reps_are_built_at_5k_pace(self):
         zones = VDOTCalculator.get_pace_zones(CURRENT_VDOT, 5.0)
@@ -56,32 +44,9 @@ class TestGoalPaceSession:
         assert work["pace_str"] == zones["5K"]["pace_str"]
         assert work["effort"] == "hard"
 
-    def test_time_goal_plan_rehearses_the_goal_pace_not_threshold(self, time_goal_plan):
-        sessions = [
-            w
-            for week in time_goal_plan["weekly_plans"]
-            for w in week["daily_workouts"]
-            if w.get("key_workout_id") == "5k_race_pace_3km"
-        ]
-        assert sessions, "expected the goal-pace session in an 8-week 5K block"
-        for session in sessions:
-            assert [s["pace_str"] for s in _work_steps(session)] == ["5:00/km"]
-
 
 class TestEveryFastSessionAgreesOnTheGoal:
     """One plan, one goal: no fast rep is prescribed slower than the goal pace."""
-
-    def test_interval_reps_are_never_slower_than_the_goal_pace(self, time_goal_plan):
-        rep_paces = [
-            step["pace_str"]
-            for week in time_goal_plan["weekly_plans"]
-            for workout in week["daily_workouts"]
-            for step in _work_steps(workout)
-            if step.get("pace_zone") in ("I", "R")
-        ]
-        assert rep_paces, "expected interval sessions in an 8-week 5K block"
-        slower = [p for p in rep_paces if _parse_pace_str_to_min_per_km(p) > GOAL_PACE]
-        assert not slower
 
     def test_taper_touches_of_goal_race_effort_run_at_the_goal(self):
         zones = pin_goal_race_pace(
@@ -96,19 +61,6 @@ class TestEveryFastSessionAgreesOnTheGoal:
         steps = _KEY_WORKOUT_STEP_BUILDERS["taper_5k10k_sharpener"](4.0, zones)
         touch = next(s for s in steps if s.get("effort") == "goal race effort")
         assert touch["pace_str"] == zones["10K"]["pace_str"]
-
-
-class TestEasyRunsSitInTheirHeartRateZone:
-    def test_easy_and_long_runs_carry_the_easy_band(self, time_goal_plan):
-        week_one = time_goal_plan["weekly_plans"][0]
-        band = VDOTCalculator.get_pace_zones(CURRENT_VDOT)["E"]["pace_str"]
-        aerobic = [
-            w for w in week_one["daily_workouts"] if w["type"] in ("easy", "long")
-        ]
-        assert aerobic
-        for workout in aerobic:
-            assert workout["zone"] == "zone_2"
-            assert [s["pace_str"] for s in _work_steps(workout)] == [band]
 
 
 class TestRaceBandEffort:
@@ -135,38 +87,6 @@ class TestRaceBandEffort:
         race = zones["zone_5_race"]
         assert race["hr_range"] == zones["zone_4_vo2max"]["hr_range"]
         assert race["hr_bpm_range"] == zones["zone_4_vo2max"]["hr_bpm_range"]
-
-
-class TestPlanPagePacePanel:
-    def _plan(self, weeks_in: int) -> SimpleNamespace:
-        return SimpleNamespace(
-            target_distance_km=5.0,
-            goal_pace=GOAL_PACE,
-            current_pace=CURRENT_PACE,
-            weeks_duration=8,
-            start_date=local_today() - timedelta(weeks=weeks_in),
-        )
-
-    def test_first_week_shows_the_paces_of_current_fitness(self):
-        zones = _current_week_pace_zones(self._plan(weeks_in=0))
-        current = VDOTCalculator.get_pace_zones(CURRENT_VDOT)
-        assert zones["E"]["pace_str"] == current["E"]["pace_str"]
-        assert zones["T"]["pace_str"] == current["T"]["pace_str"]
-
-    def test_final_week_shows_the_paces_of_goal_fitness(self):
-        zones = _current_week_pace_zones(self._plan(weeks_in=7))
-        goal = VDOTCalculator.get_pace_zones(GOAL_VDOT)
-        assert zones["T"]["pace_str"] == goal["T"]["pace_str"]
-
-    def test_a_finished_plan_stays_on_its_final_week(self):
-        late = _current_week_pace_zones(self._plan(weeks_in=20))
-        final = _current_week_pace_zones(self._plan(weeks_in=7))
-        assert late["T"] == final["T"]
-
-    def test_no_goal_pace_yields_no_zones(self):
-        plan = self._plan(weeks_in=0)
-        plan.goal_pace = None
-        assert _current_week_pace_zones(plan) is None
 
 
 class TestDistancePlanWithAGoalTime:

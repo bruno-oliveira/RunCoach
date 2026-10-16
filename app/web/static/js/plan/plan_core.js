@@ -19,7 +19,6 @@
         return div.innerHTML;
     }
 
-    let currentWeek = 1;
     let currentWorkoutId = null;
 
     /**
@@ -50,88 +49,6 @@
         } catch (e) { /* server falls back to UTC */ }
         return headers;
     }
-
-    /* -------------------------------------------------------------- */
-    /*  Customisation form helpers                                     */
-    /* -------------------------------------------------------------- */
-
-    function submitCustomization(type, value) {
-        // Show loading state
-        const cards = document.querySelectorAll('.action-card');
-        cards.forEach(function (card) {
-            if (card && card.style) {
-                card.style.opacity = '0.6';
-                card.style.cursor = 'not-allowed';
-            }
-        });
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/customize-plan';
-
-        var fields = [
-            { name: 'plan_id', value: window.APP_CTX.plan_id },
-            { name: 'week_number', value: currentWeek },
-            { name: 'adjustment_type', value: type },
-            { name: 'adjustment_value', value: value }
-        ];
-
-        fields.forEach(function (field) {
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = field.name;
-            input.value = field.value;
-            form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-    }
-
-    window.adjustIntensity = function (intensity) {
-        submitCustomization('intensity', intensity);
-    };
-
-    window.adjustDistance = function (change) {
-        submitCustomization('distance', change);
-    };
-
-    window.applyAISuggestion = function (suggestion) {
-        submitCustomization('ai_suggest', suggestion);
-    };
-
-    window.swapWorkout = function (swapInfo) {
-        submitCustomization('workout_swap', swapInfo);
-    };
-
-    window.resetCustomization = async function () {
-        var ok = await confirmDialog({
-            title: 'Reset to the original plan?',
-            body: "This undoes every change you've made and restores the plan exactly as it was first generated.",
-            confirmLabel: 'Reset plan',
-            danger: true
-        });
-        if (ok) submitCustomization('reset', 'original');
-    };
-
-    window.updateCustomizationWeek = function () {
-        var select = document.getElementById('weekSelect');
-        if (!select) return;
-        currentWeek = parseInt(select.value);
-
-        var display = document.getElementById('currentWeekDisplay');
-        if (display) {
-            display.textContent = currentWeek;
-        }
-
-        var section = document.querySelector('.customization-section');
-        if (section) {
-            section.style.animation = 'none';
-            setTimeout(function () {
-                section.style.animation = 'fadeIn 0.3s ease';
-            }, 10);
-        }
-    };
 
     /* -------------------------------------------------------------- */
     /*  Meal randomisation                                             */
@@ -708,11 +625,6 @@
         // Collapsible weeks (defined in plan_tabs.js)
         if (typeof window._initCollapsibleWeeks === 'function') window._initCollapsibleWeeks();
 
-        // Customisation week selector
-        if (typeof window.updateCustomizationWeek === 'function') {
-            window.updateCustomizationWeek();
-        }
-
         // Scroll-to-top
         initScrollToTop();
 
@@ -774,13 +686,6 @@
         reloadPlanPage: window.reloadPlanPage,
         authHeaders: window.authHeaders,
         scrollToTop: window.scrollToTop,
-        // Plan customization
-        adjustIntensity: window.adjustIntensity,
-        adjustDistance: window.adjustDistance,
-        applyAISuggestion: window.applyAISuggestion,
-        swapWorkout: window.swapWorkout,
-        resetCustomization: window.resetCustomization,
-        updateCustomizationWeek: window.updateCustomizationWeek,
         // Plan lifecycle (start / reset / save)
         startPlan: window.startPlan,
         resetAdjustment: window.resetAdjustment,

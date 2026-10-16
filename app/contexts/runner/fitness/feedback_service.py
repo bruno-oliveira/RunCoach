@@ -113,36 +113,6 @@ class FeedbackService:
         return run_feedback
 
     @staticmethod
-    def get_feedback_for_run(run_log_id: str, db: Session) -> Optional[RunFeedback]:
-        """Retrieve feedback for a specific run."""
-        return (
-            db.query(RunFeedback).filter(RunFeedback.run_log_id == run_log_id).first()
-        )
-
-    @staticmethod
-    def get_feedback_for_plan(
-        plan_id: str, user_id: str, db: Session
-    ) -> list[RunFeedback]:
-        """Retrieve all feedback entries for runs logged against a plan."""
-        run_ids = [
-            r.id
-            for r in db.query(RunLog.id)
-            .filter(
-                RunLog.training_plan_id == plan_id,
-                RunLog.user_id == user_id,
-            )
-            .all()
-        ]
-        if not run_ids:
-            return []
-        return (
-            db.query(RunFeedback)
-            .filter(RunFeedback.run_log_id.in_(run_ids))
-            .order_by(RunFeedback.created_at.desc())
-            .all()
-        )
-
-    @staticmethod
     def get_weekly_feedback_summary(
         plan_id: str, user_id: str, db: Session
     ) -> dict[int, dict]:

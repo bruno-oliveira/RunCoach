@@ -63,7 +63,6 @@ from app.schemas import (
     IntervalsPushResponse,
     IntervalsPushWeekRequest,
     IntervalsPushWeekResponse,
-    IntervalsStatusResponse,
     IntervalsSyncResponse,
     WatchPlanRequest,
     WatchStatusResponse,
@@ -670,16 +669,6 @@ async def intervals_watch_status(
         if isinstance(event, dict) and owns_event(plan_id, event.get("external_id"))
     )
     return base.model_copy(update={"events_on_calendar": ours})
-
-
-@intervals_router.get("/status", response_model=IntervalsStatusResponse)
-def intervals_status(current_user: User = Depends(get_current_user)):
-    connected = bool(current_user.intervals_athlete_id)
-    return IntervalsStatusResponse(
-        connected=connected,
-        athlete_id=current_user.intervals_athlete_id if connected else None,
-        last_synced_at=current_user.intervals_last_synced_at if connected else None,
-    )
 
 
 @intervals_router.post("/disconnect")

@@ -20,12 +20,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation.reconcile import pace_zones_for
-from app.core.time_utils import local_today, to_date
-from app.core.training.periodization.plan_calendar import compute_current_week
-from app.core.training.physiology.goal_pace_model import (
-    goal_pace_context,
-    progressive_pace_zones,
-)
 from app.core.training.physiology.zone_calculator import calculate_zones
 from app.core.training.training_config import DISTANCE_NAMES
 
@@ -68,10 +62,9 @@ def _single_vdot_training_zones(
 ) -> Optional[Dict[str, Dict[str, Any]]]:
     """The pace-zone table for a plan paced off one VDOT, or ``None`` without one.
 
-    A time-goal plan ramps its VDOT week by week and builds its own table
-    (``PerformancePlanHandler``). Every other plan is paced off the single
-    VDOT its steps were built from, and used to show a pace on each session
-    with no table to read it against — only heart-rate bands. The table comes
+    Every plan is paced off the single VDOT its steps were built from, and
+    used to show a pace on each session with no table to read it against —
+    only heart-rate bands. The table comes
     from those same zones, so it cannot disagree with the cards under it; a
     plan with no VDOT still gets none rather than a guessed one.
     """
@@ -90,84 +83,6 @@ def _single_vdot_training_zones(
         lthr=stored_zones.get("lthr"),
         race_distance_km=plan.target_distance_km or None,
     )
-
-
-def _current_week_pace_zones(plan: "TrainingPlan") -> Optional[Dict[str, Dict]]:
-    """Daniels zones for the week the runner is in — the paces on its cards.
-
-    A time-goal plan trains off a VDOT that ramps from current fitness to goal
-    fitness, so its paces change every week. Showing the *final* week's paces
-    from day one put goal-fitness paces beside heart-rate bands that describe
-    the runner as they are now: an "aerobic" pace that would in fact have them
-    at threshold, and a panel that disagreed with every card under it.
-    """
-    target_km = plan.target_distance_km
-    if not plan.goal_pace or not target_km:
-        return None
-    total_weeks = plan.weeks_duration or 1
-    start = to_date(plan.start_date)
-    week = (
-        compute_current_week(
-            start, local_today(), total_weeks=total_weeks, pre_start=1, clamp_min=1
-        )
-        if start
-        else 1
-    )
-    ctx = goal_pace_context(target_km, plan.current_pace, plan.goal_pace)
-    return progressive_pace_zones(ctx, week, total_weeks) or None
-
-
-class PerformancePlanHandler(PlanTypeHandler):
-    kind = "performance"
-
-    def matches(self, plan: "TrainingPlan") -> bool:
-        return getattr(plan, "plan_type", "") == "performance"
-
-    def display_label(self, plan: "TrainingPlan") -> str:
-        return "Performance"
-
-    def enrich_view_context(
-        self,
-        plan: "TrainingPlan",
-        db: Session,
-        extra: Dict[str, Any],
-        plan_data: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        from app.application.ports import PerformanceService
-        from app.contexts.plan.generators.performance_plan_generator import (
-            PerformancePlanGenerator,
-        )
-        from app.core.formatting import format_pace
-
-        try:
-            perf_service = PerformanceService(db)
-            gen = PerformancePlanGenerator()
-            target_km = plan.target_distance_km
-            # Anchor the pace panel's HR bands on the SAME resting/LTHR the
-            # stored canonical zones used, so the "your training paces" BPM band
-            # matches the "Heart Rate Training Zones" panel exactly.
-            stored_zones = plan.hr_zones_data or {}
-            zones = gen.calculate_training_zones(
-                plan.goal_pace,
-                plan.max_heart_rate,
-                vdot_zones=_current_week_pace_zones(plan),
-                race_distance_km=target_km or None,
-                resting_hr=stored_zones.get("resting_hr"),
-                lthr=stored_zones.get("lthr"),
-            )
-            for zone_data in zones.values():
-                zone_data["pace_formatted"] = format_pace(zone_data["pace"])
-                if "pace_range" in zone_data:
-                    pr = zone_data["pace_range"]
-                    zone_data["pace_range_formatted"] = (
-                        f"{format_pace(pr[0])} - {format_pace(pr[1])}"
-                    )
-            extra["training_zones"] = zones
-            extra["today_workout"] = perf_service.get_todays_workout(plan)
-            extra["perf_progress_data"] = perf_service.get_plan_progress(plan)
-        except Exception as e:
-            logger.warning(f"Performance context enrichment failed: {e}")
-        return extra
 
 
 class BackyardPlanHandler(PlanTypeHandler):
@@ -219,7 +134,6 @@ class DistancePlanHandler(PlanTypeHandler):
 PLAN_TYPE_REGISTRY: List[PlanTypeHandler] = [
     BackyardPlanHandler(),
     RecoveryPlanHandler(),
-    PerformancePlanHandler(),
     DistancePlanHandler(),
 ]
 
@@ -252,8 +166,8 @@ def display_label(plan: "TrainingPlan", *, space_before_km: bool = False) -> str
 
     Backyard plans render their loop count. Other distance-bearing plans
     (target_distance_km > 0) always render the distance name regardless of
-    plan_type. Special-purpose plans (performance) fall through to their
-    handler's label.
+    plan_type. Plans with no race (recovery) fall through to their handler's
+    label.
     """
     # Backyard first: its target_distance is a clamped projection, so the
     # distance shortcut below would label it with a number nobody is racing.

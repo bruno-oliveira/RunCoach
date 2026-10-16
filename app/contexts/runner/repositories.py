@@ -53,33 +53,6 @@ class SQLAlchemyRunRepository:
             q = q.limit(limit)
         return q.all()
 
-    def list_paginated_for_user(
-        self,
-        user_id: str,
-        *,
-        page: int,
-        page_size: int,
-        workout_type: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-    ) -> tuple[List[RunLog], int]:
-        """Return a page of runs (most recent first) and the unfiltered-by-page total."""
-        q = self.session.query(RunLog).filter(RunLog.user_id == user_id)
-        if workout_type:
-            q = q.filter(RunLog.workout_type == workout_type)
-        if start_date:
-            q = q.filter(RunLog.date >= start_date)
-        if end_date:
-            q = q.filter(RunLog.date <= end_date)
-        total = q.count()
-        runs = (
-            q.order_by(RunLog.date.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-            .all()
-        )
-        return runs, total
-
     def save(self, run: RunLog) -> None:
         self.session.add(run)
 

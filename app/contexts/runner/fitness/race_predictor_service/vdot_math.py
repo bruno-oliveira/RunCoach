@@ -1,53 +1,16 @@
 """Pure VDOT math helpers.
 
-Rolling-window fitness baseline, predicted-vs-actual comparison, effort-
-confidence weighting, and outlier thresholds. No DB access — operates on
+Effort-confidence weighting, outlier thresholds and the calibration factor. No DB access — operates on
 primitives and lists so it stays trivially testable.
 """
 
 import statistics
-from typing import Any, Dict, List, Optional
-
-from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from typing import List, Optional
 
 # How many top VDOTs to consider when estimating current fitness.
 # Using the median of the top N is robust to 1-2 outliers while
 # still reflecting the user's best genuine efforts.
 TOP_N_VDOTS = 3
-
-# Trailing window (weeks) for the race-history rolling-VDOT baseline.
-_VDOT_WINDOW_WEEKS = 12
-
-
-def _rolling_window_vdot(run_ts: float, prior_vdots: List[tuple]) -> Optional[float]:
-    """Median of the top-N prior VDOTs within the trailing window, or None.
-
-    ``prior_vdots`` is a list of ``(timestamp, vdot)`` for runs before this one.
-    """
-    cutoff_ts = run_ts - _VDOT_WINDOW_WEEKS * 7 * 86400
-    window_vdots = sorted((v for ts, v in prior_vdots if ts >= cutoff_ts), reverse=True)
-    if not window_vdots:
-        return None
-    return statistics.median(window_vdots[:TOP_N_VDOTS])
-
-
-def _prediction_comparison(
-    actual_seconds: Optional[int], predicted_seconds: Optional[int]
-) -> Optional[Dict[str, Any]]:
-    """Compare an actual finish time against the predicted one, or None."""
-    if not (actual_seconds and predicted_seconds):
-        return None
-    delta = actual_seconds - predicted_seconds
-    return {
-        "predicted_seconds": predicted_seconds,
-        "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
-        "actual_seconds": actual_seconds,
-        "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
-        "delta_seconds": delta,
-        "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
-        "faster_than_predicted": delta < 0,
-        "accuracy_pct": round((1 - abs(delta) / predicted_seconds) * 100, 1),
-    }
 
 
 # Confidence multiplier by user-tagged workout type. Higher = more reliable

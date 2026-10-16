@@ -32,10 +32,6 @@ WORKOUT_PACE_ZONE: dict[str, str] = {
 }
 
 
-def _midpoint(lo: int, hi: int) -> float:
-    return (lo + hi) / 2.0
-
-
 def calculate_quality_score(
     actual_effort: Optional[int],
     actual_pace_min_km: Optional[float],

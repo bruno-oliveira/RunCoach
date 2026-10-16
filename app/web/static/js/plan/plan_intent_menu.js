@@ -157,8 +157,8 @@
             + '<p class="intent-form-blurb">' + escapeHtml(it.blurb) + '</p>'
             + fields
             + '<div class="intent-form-actions">'
-            + '<button type="button" class="btn btn-ghost btn-small" data-intent-back>Cancel</button>'
-            + '<button type="button" class="btn btn-primary btn-small" id="intent-confirm">Adjust my plan</button>'
+            + '<button type="button" class="btn btn-ghost btn-sm" data-intent-back>Cancel</button>'
+            + '<button type="button" class="btn btn-primary btn-sm" id="intent-confirm">Adjust my plan</button>'
             + '</div></div>';
         b.querySelectorAll('[data-intent-back]').forEach(function (x) {
             x.onclick = renderList;

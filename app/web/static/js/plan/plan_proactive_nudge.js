@@ -55,9 +55,9 @@
             + escapeHtml(nudge.detail) + '</p>'
             + '</div>'
             + '<div class="proactive-nudge-actions">'
-            + '<button type="button" class="btn btn-small proactive-nudge-review">'
+            + '<button type="button" class="btn btn-sm proactive-nudge-review">'
             + escapeHtml(nudge.cta || 'Review') + '</button>'
-            + '<button type="button" class="btn btn-ghost btn-small proactive-nudge-dismiss">'
+            + '<button type="button" class="btn btn-ghost btn-sm proactive-nudge-dismiss">'
             + 'Not now</button>'
             + '</div>'
             + '</div>';

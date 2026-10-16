@@ -1,21 +1,18 @@
-"""Plan generation and customization endpoints."""
+"""Plan generation endpoints."""
 
 import json
 import logging
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Depends, Form, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.application.plan_view_service import PlanViewService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_service import PlanService
-from app.contexts.runner.fitness.performance_service import PerformanceService
-from app.core.formatting import parse_time_to_pace
 from app.core.training.profiles.backyard_profile import BACKYARD_LOOP_KM
 from app.dependencies import (
     get_db,
@@ -23,7 +20,6 @@ from app.dependencies import (
     get_optional_user,
     get_plan_generator,
     get_plan_service,
-    get_plan_view_service,
 )
 from app.exceptions import (
     DatabaseException,
@@ -31,16 +27,14 @@ from app.exceptions import (
     InsufficientTimeException,
     PlanGenerationError,
     PlanGenerationException,
-    RunCoachException,
     ValidationException,
     ZeroMileageUnsupportedException,
 )
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
-from app.schemas import PerformancePlanRequest, PlanRequest
-from app.web.plan_access import error_response, get_plan_or_404
+from app.schemas import PlanRequest
+from app.web.plan_access import error_response
 from app.web.rate_limit import plan_generation_limiter
-from app.web.templating import templates
 
 logger = logging.getLogger(__name__)
 
@@ -398,10 +392,6 @@ async def generate_plan(
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
     goal_time: Optional[str] = Form(None),
-    plan_mode: Optional[str] = Form("distance"),
-    goal_time_required: Optional[str] = Form(None),
-    current_time: Optional[str] = Form(None),
-    max_heart_rate: Optional[str] = Form(None),
     start_date: Optional[str] = Form(None),
     custom_spec: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
@@ -413,23 +403,6 @@ async def generate_plan(
 ) -> Response:
     """Generate a personalized training plan."""
     plan_generation_limiter.check(request)
-    hr_max = int(max_heart_rate) if max_heart_rate else None
-
-    if plan_mode == "time":
-        return await _generate_time_goal_plan(
-            request=request,
-            current_km=current_km,
-            target_distance=float(target_distance),
-            weeks=weeks,
-            runs_per_week=max_runs_per_week,
-            goal_time=goal_time_required or "",
-            current_time=current_time,
-            max_heart_rate=hr_max,
-            start_date=start_date,
-            current_user=current_user,
-            db=db,
-            plan_service=plan_service,
-        )
 
     logger.info(
         "Generate plan - current_user=%s, anon_cookie=%s, has_access_token=%s",
@@ -537,106 +510,6 @@ async def generate_plan(
         )
 
 
-async def _generate_time_goal_plan(
-    request: Request,
-    current_km: float,
-    target_distance: float,
-    weeks: int,
-    runs_per_week: int,
-    goal_time: str,
-    current_time: Optional[str],
-    max_heart_rate: Optional[int],
-    start_date: Optional[str],
-    current_user: Optional[User],
-    db: Session,
-    plan_service: PlanService,
-):
-    """Dispatch performance (time-goal) plan creation from the unified form."""
-    if not current_user:
-        return error_response(
-            request,
-            None,
-            "Time-goal plans require a logged-in account so we can track your progress.",
-            "auth_required",
-        )
-
-    if plan_service.has_reached_plan_limit(str(current_user.id), db):
-        return error_response(
-            request,
-            current_user,
-            _PLAN_LIMIT_MESSAGE,
-            "plan_limit",
-        )
-
-    if not current_time:
-        return error_response(
-            request,
-            current_user,
-            "Please enter your current finish time at this distance so we can "
-            "pace your plan.",
-            "validation",
-        )
-
-    try:
-        goal_pace = parse_time_to_pace(goal_time, target_distance)
-        current_pace = parse_time_to_pace(current_time, target_distance)
-
-        validated = PerformancePlanRequest(
-            target_distance=target_distance,
-            current_pace=current_pace,
-            goal_pace=goal_pace,
-            current_time=current_time,
-            goal_time=goal_time,
-            weeks=weeks,
-            current_weekly_km=current_km,
-            runs_per_week=runs_per_week,
-            max_heart_rate=max_heart_rate,
-        )
-
-        service = PerformanceService(db)
-        training_plan, _ = service.create_performance_plan(
-            user=current_user,
-            target_distance=validated.target_distance,
-            goal_pace=validated.goal_pace,
-            weeks=validated.weeks,
-            current_pace=validated.current_pace,
-            current_weekly_km=validated.current_weekly_km,
-            goal_time=validated.goal_time,
-            current_time=validated.current_time,
-            runs_per_week=validated.runs_per_week,
-            max_heart_rate=validated.max_heart_rate,
-        )
-        _apply_start_date(training_plan, start_date, db)
-
-        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
-
-    except RunCoachException as e:
-        return error_response(
-            request,
-            current_user,
-            e.user_message,
-            "validation",
-            getattr(e, "suggestion", None),
-        )
-    except ValidationError as e:
-        return error_response(
-            request,
-            current_user,
-            _extract_validation_message(e) or "Please check your values and try again.",
-            "validation",
-        )
-    except ValueError as e:
-        return error_response(request, current_user, str(e), "validation")
-    except Exception as e:
-        logger.exception("Time-goal plan generation failed (%s)", type(e).__name__)
-        return error_response(
-            request,
-            current_user,
-            "An unexpected error occurred while generating your plan. Please try again.",
-            "general",
-        )
-
-
 @router.get("/assess-long-run")
 def assess_long_run(
     current_km: float,
@@ -704,60 +577,3 @@ def assess_long_run(
     except Exception:
         logger.debug("assess-long-run estimate failed", exc_info=True)
         return JSONResponse({"long_run_warning": None})
-
-
-@router.post("/customize-plan", response_class=HTMLResponse)
-def customize_plan(
-    request: Request,
-    plan_id: str = Form(...),
-    week_number: int = Form(...),
-    adjustment_type: str = Form(...),
-    adjustment_value: str = Form(...),
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
-    plan_service: PlanService = Depends(get_plan_service),
-    plan_view_service: PlanViewService = Depends(get_plan_view_service),
-) -> Response:
-    """Handle plan customization with simple interface."""
-    training_plan = None
-    try:
-        training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
-
-        plan_service.customize_plan(
-            training_plan, week_number, adjustment_type, adjustment_value, db
-        )
-
-        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
-
-    except HTTPException:
-        raise
-    except Exception:
-        db.rollback()
-        logger.exception("Error customizing plan")
-        # getattr returns Any, side-stepping the SQLAlchemy Column[...] typing
-        # while preserving the original truthiness checks at runtime.
-        plan_data = getattr(training_plan, "plan_data", None) if training_plan else None
-        nutrition_data = (
-            getattr(training_plan, "nutrition_plan_data", None)
-            if training_plan
-            else None
-        )
-        return templates.TemplateResponse(
-            request,
-            "plan.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "plan": plan_data if plan_data else [],
-                "plan_id": plan_id,
-                "nutrition_plan": (
-                    plan_view_service.nutrition_for_template(nutrition_data)
-                    if nutrition_data
-                    else {}
-                ),
-                "progress_data": None,
-                "error": "An error occurred while customizing the plan.",
-            },
-        )

@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
     from app.core.training.custom_plan import CustomPlanSpec
-    from app.core.training.physiology.environment import EnvironmentalConditions
 
 from app.core.training.profiles.backyard_profile import (
     BACKYARD_LOOP_KM,
@@ -151,20 +150,6 @@ class PlanRequestBase(BaseModel):
         le=6000.0,
         description="Race elevation above sea level in m (for altitude-adjusted VDOT).",
     )
-
-    def race_conditions(self) -> Optional["EnvironmentalConditions"]:
-        """Build :class:`EnvironmentalConditions` from the optional race inputs.
-
-        Returns ``None`` when nothing actionable was supplied so callers can
-        treat "no conditions" uniformly.
-        """
-        from app.core.training.physiology.environment import EnvironmentalConditions
-
-        return EnvironmentalConditions.from_inputs(
-            temp_c=self.race_temp_c,
-            humidity_pct=self.race_humidity_pct,
-            altitude_m=self.race_altitude_m,
-        )
 
 
 class RaceInfoMixin(BaseModel):

@@ -1,7 +1,7 @@
 """Pydantic schemas for run logging."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -122,10 +122,3 @@ class RunLogResponse(RunLogBase):
     race_comparison: Optional[Dict[str, Any]] = None
     vdot_recalibration: Optional[Dict[str, Any]] = None
     auto_adjust: Optional[Dict[str, Any]] = None
-
-
-class RunLogListResponse(BaseModel):
-    runs: List[RunLogResponse]
-    total: int
-    page: int
-    page_size: int

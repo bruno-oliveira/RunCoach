@@ -74,7 +74,7 @@ class PlanViewService:
         current_user: Optional[User],
         db: Session,
     ) -> dict[str, Any]:
-        from app.contexts.runner.fitness.performance_service import PerformanceService
+        from app.contexts.runner.fitness.plan_progress import get_plan_progress
 
         performance_analysis = self._adaptation_service.analyze_performance(
             training_plan.id, db
@@ -90,7 +90,7 @@ class PlanViewService:
         progress_data = None
         if current_user and logged_runs:
             try:
-                progress_data = PerformanceService(db).get_plan_progress(training_plan)
+                progress_data = get_plan_progress(db, training_plan)
             except Exception as e:
                 logger.warning("Could not compute progress data: %s", e)
                 partial_errors.append("progress")
@@ -134,7 +134,10 @@ class PlanViewService:
             .join(DailyWorkout, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
             .filter(
                 WeeklyPlan.training_plan_id == training_plan.id,
+                # Every generated workout carries its baseline; a week only
+                # has something to reset once a distance has moved off it.
                 DailyWorkout.baseline_distance_km.isnot(None),
+                DailyWorkout.baseline_distance_km != DailyWorkout.distance_km,
             )
             .distinct()
             .all()

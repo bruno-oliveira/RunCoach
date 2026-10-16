@@ -422,24 +422,6 @@ class TestPredictionsAndGaps:
         assert result["current_vdot"] is not None
         assert result["predictions"]
 
-    def test_analyze_gap_goal_faster_than_fitness(self, test_db):
-        result = RacePredictorService.analyze_fitness_gap(45.0, 10.0, 1, test_db)
-        assert result["feasible"] is True
-        assert "faster than" in result["gap_label"]
-
-    def test_analyze_gap_goal_slower_than_fitness(self, test_db):
-        from app.core.training.physiology.vdot_calculator import VDOTCalculator
-
-        predicted = VDOTCalculator.predict_time_for_distance(45.0, 10.0)
-        # Goal slightly slower than predicted → current fitness already meets
-        # it, so vdot_required resolves to ~current and the goal is feasible.
-        result = RacePredictorService.analyze_fitness_gap(
-            45.0, 10.0, int(predicted * 1.03), test_db
-        )
-        assert result["vdot_required"] is not None
-        assert result["feasible"] is True
-        assert "slower than predicted" in result["gap_label"]
-
     def test_trail_run_count(self, test_db):
         user = _make_user(test_db)
         _add_run(
@@ -462,31 +444,6 @@ class TestPredictionsAndGaps:
         )
         test_db.flush()
         assert RacePredictorService.get_trail_runs_count(user.id, test_db) == 1
-
-    def test_race_history_with_comparison(self, test_db):
-        user = _make_user(test_db)
-        for i in range(4):
-            _add_run(
-                test_db,
-                user.id,
-                distance_km=10.0,
-                duration_minutes=50,
-                days_ago=40 - i * 5,
-                vdot=46,
-            )
-        _add_run(
-            test_db,
-            user.id,
-            distance_km=10.0,
-            duration_minutes=49,
-            days_ago=2,
-            vdot=47,
-        )
-        test_db.flush()
-        result = RacePredictorService.get_race_history(user.id, limit=10, db=test_db)
-        assert result["total"] >= 1
-        assert result["runs_with_predictions"] >= 1
-        assert result["avg_prediction_accuracy"] is not None
 
 
 class TestCalibrationFactorPure:

@@ -14,19 +14,15 @@ never exceeds one decimal and never disagrees with the executable step.
 These tests pin that behaviour so it cannot silently regress:
 
   * ``format_km`` / ``truncate_km`` truncate rather than round.
-  * No description or structure string emitted by either plan family contains
-    a number with two or more decimal places.
-  * Every performance training zone carries a non-empty ``pace_formatted`` and
-    ``pace_range_formatted`` (the zone table that was previously blank).
+  * No description or structure string in a generated plan contains a number
+    with two or more decimal places.
 """
 
 import re
 
 import pytest
 
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.formatting import format_km, truncate_km
 
 # Matches a decimal number with two or more fractional digits (e.g. 0.775,
@@ -62,32 +58,21 @@ class TestFormatKmTruncates:
             assert truncate_km(v) <= v + 1e-9
 
 
-def _performance_plans():
-    gen = PerformancePlanGenerator()
+def _road_plans():
+    gen = TrainingPlanGenerator()
     plans = []
     for dist in (5.0, 10.0, 21.1, 42.2):
         for wk_km in (15.0, 40.0, 80.0):
             for rpw in (3, 5):
-                for cp, gp in ((5.5, 5.0), (7.0, 6.5)):
-                    try:
-                        plans.append(
-                            gen.generate_plan(
-                                target_distance=dist,
-                                current_pace=cp,
-                                goal_pace=gp,
-                                weeks=12,
-                                current_weekly_km=wk_km,
-                                runs_per_week=rpw,
-                                max_heart_rate=185,
-                            )
-                        )
-                    except Exception:
-                        continue
+                try:
+                    plans.append(gen.generate_plan(wk_km, dist, 12, rpw, vdot=45.0))
+                except Exception:
+                    continue
     return plans
 
 
 def _iter_workouts(plan):
-    for week in plan.get("weekly_plans", []):
+    for week in plan:
         for w in week.get("daily_workouts", []):
             yield week, w
 
@@ -109,25 +94,13 @@ def _multi_decimal_offenders(plan):
 
 
 class TestNoMultiDecimalDistances:
-    def test_performance_plans_have_one_decimal_distances(self):
-        plans = _performance_plans()
-        assert plans, "expected at least one performance plan to generate"
+    def test_road_plans_have_one_decimal_distances(self):
+        plans = _road_plans()
+        assert plans, "expected at least one road plan to generate"
         offenders = []
         for plan in plans:
             offenders.extend(_multi_decimal_offenders(plan))
         assert not offenders, f"multi-decimal distances found: {offenders[:10]}"
-
-
-class TestPerformanceZonesCarryFormattedPaces:
-    def test_every_zone_has_formatted_pace_and_band(self):
-        plans = _performance_plans()
-        assert plans
-        for plan in plans:
-            for zone_name, zone in plan["training_zones"].items():
-                pf = zone.get("pace_formatted")
-                prf = zone.get("pace_range_formatted")
-                assert pf and pf != "--", f"{zone_name} missing pace_formatted"
-                assert prf and prf != "--", f"{zone_name} missing pace_range_formatted"
 
 
 class TestKeyWorkoutOverlayRendering:

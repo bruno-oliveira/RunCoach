@@ -223,65 +223,6 @@ class MealDatabase:
         )
         return candidates[:limit]
 
-    def get_meals_by_tags(
-        self, tags: list[str], match_all: bool = False
-    ) -> list[dict[str, Any]]:
-        """
-        Get meals matching dietary tags.
-
-        Args:
-            tags: List of dietary tags to match
-            match_all: If True, meal must have all tags. If False, any tag matches.
-        """
-        matching_meals = []
-        for meal in self.meals:
-            meal_tags = meal.get("dietary_tags", [])
-            if match_all:
-                if all(tag in meal_tags for tag in tags):
-                    matching_meals.append(meal)
-            else:
-                if any(tag in meal_tags for tag in tags):
-                    matching_meals.append(meal)
-        return matching_meals
-
-    def get_daily_meal_plan(
-        self,
-        target_calories: float = 2000,
-        target_protein: float = 120,
-        target_fiber: float = 30,
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Generate a balanced daily meal plan."""
-        meal_plan = {
-            "breakfast": [],
-            "lunch": [],
-            "dinner": [],
-            "snack": [],
-            "post_workout": [],
-        }
-
-        for meal_type in meal_plan:
-            available_meals = self.get_meals_by_type(meal_type)
-            if available_meals:
-                # Prioritize high protein and fiber meals
-                scored_meals = []
-                for meal in available_meals:
-                    score = 0
-                    if meal["protein"] >= 20:
-                        score += 2
-                    if meal["fiber"] >= 8:
-                        score += 2
-                    if meal["protein"] >= 15:
-                        score += 1
-                    if meal["fiber"] >= 5:
-                        score += 1
-                    scored_meals.append((score, meal))
-
-                scored_meals.sort(key=lambda x: x[0], reverse=True)
-                if scored_meals:
-                    meal_plan[meal_type].append(scored_meals[0][1])
-
-        return meal_plan
-
     def get_meal_count(self) -> dict[str, int]:
         """Get count of meals by type."""
         counts = {}

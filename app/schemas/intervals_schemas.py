@@ -42,12 +42,6 @@ class IntervalsPushWeekResponse(BaseModel):
     message: str
 
 
-class IntervalsStatusResponse(BaseModel):
-    connected: bool
-    athlete_id: Optional[str] = None
-    last_synced_at: Optional[int] = None
-
-
 class WatchSyncToggleRequest(BaseModel):
     """Turn the standing "keep my watch in sync" mirror on or off for a plan."""
 

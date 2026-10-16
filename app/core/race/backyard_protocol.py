@@ -28,7 +28,7 @@ they are the only cues the runner will actually hear at 3am.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.core.training.profiles.backyard_profile import BackyardProfile
 
@@ -483,13 +483,3 @@ def build_backyard_protocol(
         "is_trail": False,
         "is_backyard": True,
     }
-
-
-def backyard_protocol_or_none(
-    profile: Optional[BackyardProfile],
-    week_before_base: List[str],
-) -> Optional[Dict[str, Any]]:
-    """Convenience wrapper for callers holding an optional profile."""
-    if profile is None:
-        return None
-    return build_backyard_protocol(profile, week_before_base)

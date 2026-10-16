@@ -2,21 +2,13 @@
 
 from functools import lru_cache
 
-from fastapi import Depends
-from sqlalchemy.orm import Session
-
 from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.nutrition.favorites_service import FavoritesService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_service import PlanService
-from app.contexts.runner.fitness.performance_service import PerformanceService
-from app.infrastructure.database import get_db
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.integrations.intervals_service import IntervalsService
 
@@ -29,11 +21,6 @@ def get_plan_generator() -> TrainingPlanGenerator:
 @lru_cache
 def get_pdf_generator() -> PDFGenerator:
     return PDFGenerator()
-
-
-@lru_cache
-def get_performance_plan_generator() -> PerformancePlanGenerator:
-    return PerformancePlanGenerator()
 
 
 @lru_cache
@@ -71,15 +58,9 @@ def get_nutrition_engine(random_seed: int | None = None) -> NutritionEngine:
     return NutritionEngine(random_seed=random_seed)
 
 
-def get_performance_service(db: Session = Depends(get_db)) -> PerformanceService:
-    """PerformanceService holds a DB session, so it must be per-request."""
-    return PerformanceService(db)
-
-
 __all__ = [
     "get_plan_generator",
     "get_pdf_generator",
-    "get_performance_plan_generator",
     "get_auth_service",
     "get_plan_service",
     "get_plan_view_service",
@@ -87,5 +68,4 @@ __all__ = [
     "get_adaptation_service",
     "get_favorites_service",
     "get_nutrition_engine",
-    "get_performance_service",
 ]

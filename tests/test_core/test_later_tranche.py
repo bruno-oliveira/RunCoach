@@ -8,9 +8,6 @@ and the session-hit-rate recalibration (E5).
 import pytest
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.workout_scaler import long_run_pace_min_km
 from app.contexts.runner.fitness.readiness_scoring import score_taper
@@ -41,16 +38,6 @@ def test_attach_strength_sessions_respects_max_sessions():
         workouts, 4, "base", attach_types=("run_walk",), max_sessions=1
     )
     assert len(attached) == 1
-
-
-def test_performance_generator_attaches_strength():
-    plan = PerformancePlanGenerator().generate_plan(
-        10.0, 5.0, 4.5, 10, 40, runs_per_week=5
-    )
-    weeks_with_strength = [
-        w for w in plan["weekly_plans"] if w.get("strength_training")
-    ]
-    assert len(weeks_with_strength) == len(plan["weekly_plans"])
 
 
 def test_beginner_strength_starts_after_habit_established():

@@ -35,26 +35,6 @@ _DEMANDING_TYPES = frozenset(
 _DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
-def get_week_workouts(plan_id: str, week_number: int, db: Session):
-    """Fetch weekly plan and its workouts."""
-    weekly_plan = (
-        db.query(WeeklyPlan)
-        .filter(
-            WeeklyPlan.training_plan_id == plan_id,
-            WeeklyPlan.week_number == week_number,
-        )
-        .first()
-    )
-    if not weekly_plan:
-        return None, []
-    workouts = (
-        db.query(DailyWorkout)
-        .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
-        .all()
-    )
-    return weekly_plan, workouts
-
-
 def apply_week_action(
     action: str,
     training_plan: TrainingPlan,

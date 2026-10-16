@@ -42,7 +42,6 @@
 .change-receipt-note { font-size: var(--text-sm); color: var(--color-text-secondary); }
 .change-receipt-next { margin-bottom: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
 .hero:not(.hero--status) { min-height: auto; }
-.anon-plan-form .mode-toggle-wrap, .anon-plan-form .mode-description { display: none; }
 .hero-form-wrap .form-card { padding: var(--space-6); }
 
 /* Visitor landing: the form beside the week it produces, then what connecting adds. */
