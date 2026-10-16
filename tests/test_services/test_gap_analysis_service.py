@@ -7,17 +7,28 @@ tests pin the report's shape, the volume/long-run arithmetic against known runs,
 and the nullable columns the computation reads (`distance_km`, `avg_pace_min_km`).
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
-from app.core.time_utils import local_today
 from app.models import RunLog, TrainingPlan, User
 
 WEEKS = 4
 PLANNED_KM = 30.0
+# A Sunday: 13 days after it is a Monday start, so "13 days in" is the last day
+# of week 2 whatever weekday the suite runs on (plans start on Mondays).
+TODAY = date(2026, 10, 18)
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today(monkeypatch):
+    monkeypatch.setattr(
+        "app.contexts.runner.fitness.gap_analysis_service.context.local_today",
+        lambda: TODAY,
+    )
 
 
 def _plan_data(weeks: int = WEEKS) -> list[dict]:
@@ -60,9 +71,7 @@ def _plan(
         current_weekly_km=30,
         target_distance="10",
         weeks_duration=weeks,
-        start_date=(
-            local_today() - timedelta(days=days_ago) if days_ago is not None else None
-        ),
+        start_date=(TODAY - timedelta(days=days_ago) if days_ago is not None else None),
         plan_data=_plan_data() if plan_data is None else plan_data,
     )
     db.add(plan)

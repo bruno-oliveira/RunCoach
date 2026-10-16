@@ -101,6 +101,14 @@ def test_review_is_due_on_the_last_day_and_the_morning_after(test_db, setup):
     assert due_review(plan, user.id, test_db, sunday - timedelta(days=2)) is None
 
 
+def test_no_review_for_a_runner_with_no_run_on_record(test_db, setup):
+    """Nothing connected yet is not a week of missed sessions."""
+    user, plan, sunday = setup
+    test_db.query(RunLog).filter(RunLog.user_id == user.id).delete()
+    test_db.commit()
+    assert due_review(plan, user.id, test_db, sunday) is None
+
+
 def _at(today, hour):
     return datetime.combine(today, time(hour, 10), tzinfo=timezone.utc)
 

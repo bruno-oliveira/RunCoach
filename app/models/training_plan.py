@@ -12,9 +12,10 @@ from sqlalchemy import (
     Integer,
     String,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.time_utils import utcnow_naive
+from app.core.training.periodization.plan_calendar import week_monday
 from app.models.base import Base
 
 if TYPE_CHECKING:
@@ -145,6 +146,22 @@ class TrainingPlan(Base):
     weekly_plans: Mapped[list["WeeklyPlan"]] = relationship(
         "WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan"
     )
+
+    @validates("start_date")
+    def _snap_start_to_monday(
+        self, _key: str, value: datetime | None
+    ) -> datetime | None:
+        """Every plan starts on a Monday, whichever day the runner picked.
+
+        A workout's ``day`` is an ISO weekday — the engine keeps Tuesday and
+        Friday free by that number — while weeks are counted from this date.
+        A Friday start made the two disagree: the watch got Monday's session on
+        Friday while the today card showed Friday's rest. Snapping here covers
+        every path that sets a start, present and future.
+        """
+        if value is None:
+            return None
+        return week_monday(value)
 
     def backyard_profile(self):
         """Rebuild the stored backyard goal, or ``None`` for other plans.

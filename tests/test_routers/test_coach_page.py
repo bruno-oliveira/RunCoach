@@ -141,7 +141,7 @@ def test_free_running_with_no_goal_is_read_from_the_runs_alone(api, runner, test
     assert 'data-i18n="coach.no_goal"' in page.text
     # All easy, all one length: the first of the two becomes the one change.
     assert 'data-i18n="coach.head_tune"' in page.text
-    assert page.text.count('data-i18n="coach.all_easy"') == 2
+    assert page.text.count('data-i18n="coach.all_easy"') == 1
     assert 'data-i18n="coach.same_length"' in page.text
     assert 'href="/run"' in page.text
 
@@ -197,7 +197,7 @@ def test_a_plan_being_skipped_says_so_and_points_at_the_plan(api, runner, test_d
     page = api.get("/coach")
 
     assert 'data-i18n="coach.head_goal_behind"' in page.text
-    assert page.text.count('data-i18n="coach.sessions_missed"') == 2
+    assert page.text.count('data-i18n="coach.sessions_missed"') == 1
     assert 'class="btn btn-accent" href="/plan/coach-plan"' in page.text
 
 
@@ -232,7 +232,7 @@ def test_a_goal_time_out_of_reach_is_said_in_times(api, runner, test_db, monkeyp
     page = api.get("/coach")
 
     assert 'data-i18n="coach.head_goal_behind"' in page.text
-    assert page.text.count('data-i18n="coach.time_far"') == 2
+    assert page.text.count('data-i18n="coach.time_far"') == 1
     assert "2:00:00" in page.text and "1:45:00" in page.text
 
 

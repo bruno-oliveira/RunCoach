@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.training.periodization.plan_calendar import week_monday
 from app.dependencies import get_current_user, get_db
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
@@ -66,7 +67,10 @@ def plan(test_db: Session, owner: User) -> TrainingPlan:
         target_distance="10",
         weeks_duration=4,
         vdot=45.0,
-        start_date=datetime.combine(date.today(), datetime.min.time()),
+        # Next Monday: every day of week 1 is still ahead, whatever today is.
+        start_date=datetime.combine(
+            week_monday(date.today()) + timedelta(weeks=1), datetime.min.time()
+        ),
         plan_data=_plan_data(),
     )
     test_db.add(tp)

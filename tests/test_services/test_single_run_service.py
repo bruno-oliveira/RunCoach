@@ -27,6 +27,7 @@ from app.contexts.runner.single_runs import (
     recent_weekly_km,
 )
 from app.core.time_utils import local_today
+from app.core.training.periodization.plan_calendar import week_monday
 from app.exceptions import ValidationException
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
@@ -94,12 +95,12 @@ def _single_run(db: Session, user: User, when, km: float, run_type="tempo"):
 def _plan_with_day(
     db: Session, user: User, km: float, workout_type: str = "easy"
 ) -> tuple[TrainingPlan, str]:
-    """A plan that started today whose day-1 workout is a run of ``km``."""
+    """A plan in its first week whose session today is a run of ``km``."""
     today = local_today()
     plan = TrainingPlan(
         id="sr-plan",
         user_id=user.id,
-        start_date=datetime.combine(today, time.min),
+        start_date=datetime.combine(week_monday(today), time.min),
         weeks_duration=8,
         target_distance="10",
         current_weekly_km=30,
@@ -110,7 +111,7 @@ def _plan_with_day(
     day = DailyWorkout(
         id="sr-day",
         weekly_plan_id=week.id,
-        day_of_week=1,
+        day_of_week=today.isoweekday(),
         workout_type=workout_type,
         distance_km=km,
     )
@@ -434,20 +435,22 @@ def test_a_planned_day_already_run_does_not_compete(test_db, runner):
 
 def test_planned_runs_are_dated_and_skip_rest_days(test_db, runner):
     today = local_today()
+    monday = week_monday(today)
     _, day_id = _plan_with_day(test_db, runner, 8.0, "tempo")
+    rest_day, long_day = [d for d in range(1, 8) if d != today.isoweekday()][:2]
     test_db.add_all(
         [
             DailyWorkout(
                 id="sr-rest",
                 weekly_plan_id="sr-week",
-                day_of_week=2,
+                day_of_week=rest_day,
                 workout_type="rest",
                 distance_km=0,
             ),
             DailyWorkout(
                 id="sr-day3",
                 weekly_plan_id="sr-week",
-                day_of_week=3,
+                day_of_week=long_day,
                 workout_type="long",
                 distance_km=16.0,
             ),
@@ -455,12 +458,17 @@ def test_planned_runs_are_dated_and_skip_rest_days(test_db, runner):
     )
     test_db.commit()
 
-    planned = planned_runs_between(runner.id, test_db, today, today + timedelta(days=6))
+    planned = planned_runs_between(
+        runner.id, test_db, monday, monday + timedelta(days=6)
+    )
 
-    assert [(p.workout_id, p.on_date, p.completed) for p in planned] == [
+    expected = [
         (day_id, today, False),
-        ("sr-day3", today + timedelta(days=2), False),
+        ("sr-day3", monday + timedelta(days=long_day - 1), False),
     ]
+    assert [(p.workout_id, p.on_date, p.completed) for p in planned] == sorted(
+        expected, key=lambda row: row[1]
+    )
     assert (
         planned_runs_between(runner.id, test_db, today, today)[0].workout_id == day_id
     )

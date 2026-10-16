@@ -16,7 +16,7 @@ from app.contexts.plan.plan_status import (
 )
 from app.models import TrainingPlan
 
-TODAY = date(2026, 3, 10)
+TODAY = date(2026, 3, 9)  # a Monday: plans start on Mondays
 
 
 def _plan(plan_id: str = "p1", **kwargs) -> TrainingPlan:
@@ -26,11 +26,11 @@ def _plan(plan_id: str = "p1", **kwargs) -> TrainingPlan:
 
 
 def test_a_plan_starting_in_the_future_has_not_started():
-    plan = _plan(start_date=datetime(2026, 3, 20), weeks_duration=8)
+    plan = _plan(start_date=datetime(2026, 3, 23), weeks_duration=8)
 
     status = plan_status(plan, TODAY)
 
-    assert status.label == "Starts Mar 20"
+    assert status.label == "Starts Mar 23"
     assert status.completed is False
 
 

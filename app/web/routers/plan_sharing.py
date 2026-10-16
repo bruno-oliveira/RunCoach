@@ -75,7 +75,8 @@ def set_plan_start_date(
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     training_plan.start_date = datetime.combine(body.start_date, datetime.min.time())
     db.commit()
-    return {"ok": True, "start_date": body.start_date.isoformat()}
+    starts = training_plan.start_date
+    return {"ok": True, "start_date": starts.date().isoformat() if starts else None}
 
 
 # ---------------------------------------------------------------------------

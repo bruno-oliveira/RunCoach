@@ -14,6 +14,7 @@ import pytest
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.core.time_utils import utcnow_naive
 from app.core.training import watch_mirror
+from app.core.training.periodization.plan_calendar import week_monday
 from app.core.training.watch_mirror import event_hash, events_in_window, owns_event
 from app.models import TrainingPlan, User
 
@@ -97,14 +98,19 @@ def synced_user(test_db) -> User:
 
 @pytest.fixture
 def pushed_plan(test_db, synced_user) -> TrainingPlan:
-    """A plan starting today that the runner keeps mirrored to their watch."""
+    """A plan starting next Monday that the runner keeps mirrored to their watch.
+
+    Next Monday rather than this one, so every day of week 1 is still ahead and
+    inside the mirror's window whatever weekday the suite runs on.
+    """
+    next_monday = week_monday(date.today()) + timedelta(weeks=1)
     plan = TrainingPlan(
         id="watch-plan",
         user_id=synced_user.id,
         current_weekly_km=30,
         target_distance="10",
         weeks_duration=4,
-        start_date=datetime.combine(date.today(), datetime.min.time()),
+        start_date=datetime.combine(next_monday, datetime.min.time()),
         plan_data=[_week(1), _week(2), _week(3), _week(4)],
         watch_synced_at=utcnow_naive(),
         watch_sync_enabled=True,

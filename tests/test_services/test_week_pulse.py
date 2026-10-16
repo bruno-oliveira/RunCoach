@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
+from app.core.training.periodization.plan_calendar import week_monday
 from app.models import Base, RunLog, TrainingPlan, User
 
 
@@ -53,7 +54,7 @@ def _plan(db, *, with_start=True, planned_km=30.0):
         current_weekly_km=30,
         target_distance="21.1",
         weeks_duration=8,
-        start_date=_now() - timedelta(weeks=1) if with_start else None,
+        start_date=_this_monday() - timedelta(weeks=1) if with_start else None,
         plan_data=[{"week": 2, "total_km": planned_km, "daily_workouts": []}],
     )
     db.add(plan)
@@ -61,13 +62,18 @@ def _plan(db, *, with_start=True, planned_km=30.0):
     return user, plan
 
 
+def _this_monday():
+    return week_monday(_now()).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def _run(db, user, plan, *, days_ago, dist, effort=None):
+    """Log a run ``days_ago`` days before this week's Monday (0 = that Monday)."""
     db.add(
         RunLog(
             id=_uid(),
             user_id=user.id,
             training_plan_id=plan.id,
-            date=_now() - timedelta(days=days_ago),
+            date=_this_monday() - timedelta(days=days_ago),
             distance_km=dist,
             duration_minutes=int(dist * 6),
             perceived_effort=effort,
@@ -75,7 +81,7 @@ def _run(db, user, plan, *, days_ago, dist, effort=None):
     )
 
 
-# current_week=2: week_start == today, prev week == [today-7d, today).
+# current_week=2: week 2 opens this Monday; the previous week is the one before.
 _WK = 2
 
 

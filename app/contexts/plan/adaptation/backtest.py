@@ -25,7 +25,7 @@ Run it directly to print a report::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from statistics import median
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -36,6 +36,8 @@ from app.contexts.plan.adaptation.fitness_signals import FitnessSignalsProvider
 from app.contexts.plan.adaptation.tuning import PHASE_WEIGHTS
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_creation_helpers import persist_weekly_workouts
+from app.core.time_utils import to_date
+from app.core.training.periodization.plan_calendar import week_monday
 from app.core.training.physiology.hr_zone_calculator import (
     WORKOUT_ZONE_MAP,
     HRZoneCalculator,
@@ -222,24 +224,38 @@ def _clear_runs(db: Session, plan: TrainingPlan) -> None:
 
 
 def _seed_runs(
-    db: Session,
-    user: User,
-    plan: TrainingPlan,
-    archetype: RunnerArchetype,
-    *,
-    through_week: int,
-    start_date: datetime,
+    db: Session, plan: TrainingPlan, archetype: RunnerArchetype, before: date
 ) -> None:
-    """Fabricate linked RunLogs for every completed week (< ``through_week``)."""
-    # Match gather_signals' definition of "scheduled" past workouts (every
-    # non-rest workout), so a 100%-completion archetype yields completion ≈ 1.0
-    # rather than being penalised for workout types this harness skipped.
-    rows = (
+    """Fabricate linked RunLogs for every session dated before ``before``.
+
+    Weeks start on Mondays, so the evaluation day usually falls mid-week: the
+    days of the current week already behind it are history too, and leaving
+    them unlogged would read a perfect adherent as one who skipped them.
+    """
+    start = to_date(plan.start_date)
+    assert start is not None, "the replay sets a start date before seeding"
+    zones = (plan.hr_zones_data or {}).get("zones")
+    for idx, (workout, week_number) in enumerate(_scheduled_runs(db, plan)):
+        run_day = start + timedelta(
+            weeks=week_number - 1, days=(workout.day_of_week or 1) - 1
+        )
+        if run_day < before and _should_log(idx, archetype.completion_prob):
+            db.add(_fabricated_run(plan, workout, run_day, archetype, zones))
+    db.flush()
+
+
+def _scheduled_runs(db: Session, plan: TrainingPlan) -> list:
+    """Every non-rest workout, in calendar order.
+
+    Matches gather_signals' definition of "scheduled" past workouts, so a
+    100%-completion archetype yields completion ≈ 1.0 rather than being
+    penalised for workout types this harness skipped.
+    """
+    return (
         db.query(DailyWorkout, WeeklyPlan.week_number)
         .join(WeeklyPlan)
         .filter(
             WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number < through_week,
             DailyWorkout.workout_type != "rest",
             DailyWorkout.distance_km > 0,
         )
@@ -247,37 +263,32 @@ def _seed_runs(
         .all()
     )
 
-    zones = (plan.hr_zones_data or {}).get("zones") if plan.hr_zones_data else None
 
-    for idx, (workout, week_number) in enumerate(rows):
-        if not _should_log(idx, archetype.completion_prob):
-            continue
-        run_date = start_date + timedelta(
-            weeks=(week_number - 1), days=(workout.day_of_week - 1)
-        )
-        base_pace = _BASE_PACE_MIN_KM.get(workout.workout_type or "easy", 6.0)
-        pace = round(base_pace * archetype.pace_mult, 2)
-        distance = round((workout.distance_km or 0) * archetype.volume_mult, 2)
-        avg_hr = (
-            _hr_for(workout.workout_type or "easy", archetype.hr_zone_offset, zones)
-            if zones
-            else None
-        )
-        db.add(
-            RunLog(
-                user_id=user.id,
-                training_plan_id=plan.id,
-                daily_workout_id=workout.id,
-                date=datetime.combine(run_date.date(), datetime.min.time()),
-                distance_km=distance,
-                duration_minutes=round(distance * pace, 1),
-                avg_pace_min_km=pace,
-                avg_heart_rate=avg_hr,
-                workout_type=workout.workout_type,
-                perceived_effort=archetype.effort,
-            )
-        )
-    db.flush()
+def _fabricated_run(
+    plan: TrainingPlan,
+    workout: DailyWorkout,
+    run_day: date,
+    archetype: RunnerArchetype,
+    zones: Optional[Any],
+) -> RunLog:
+    """The run this archetype would log for ``workout`` on ``run_day``."""
+    workout_type = workout.workout_type or "easy"
+    pace = round(_BASE_PACE_MIN_KM.get(workout_type, 6.0) * archetype.pace_mult, 2)
+    distance = round((workout.distance_km or 0) * archetype.volume_mult, 2)
+    return RunLog(
+        user_id=plan.user_id,
+        training_plan_id=plan.id,
+        daily_workout_id=workout.id,
+        date=datetime.combine(run_day, datetime.min.time()),
+        distance_km=distance,
+        duration_minutes=round(distance * pace, 1),
+        avg_pace_min_km=pace,
+        avg_heart_rate=(
+            _hr_for(workout_type, archetype.hr_zone_offset, zones) if zones else None
+        ),
+        workout_type=workout.workout_type,
+        perceived_effort=archetype.effort,
+    )
 
 
 def _stub_provider(archetype: RunnerArchetype) -> FitnessSignalsProvider:
@@ -333,7 +344,7 @@ def replay(
     observations: List[WeekObservation] = []
     for k in weeks_to_eval:
         start_date = datetime.combine(
-            today - timedelta(weeks=(k - 1)), datetime.min.time()
+            week_monday(today) - timedelta(weeks=(k - 1)), datetime.min.time()
         )
         plan.start_date = start_date
         # A fresh evaluation each week: clear and re-seed history relative to the
@@ -341,7 +352,7 @@ def replay(
         # (non-expanded) multiplier range is what we observe.
         plan.adaptation_history = None
         _clear_runs(db, plan)
-        _seed_runs(db, user, plan, archetype, through_week=k, start_date=start_date)
+        _seed_runs(db, plan, archetype, before=today)
         db.flush()
 
         phase = plan_adjuster._get_current_phase(plan, k)

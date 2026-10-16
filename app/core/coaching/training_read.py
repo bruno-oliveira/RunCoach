@@ -210,10 +210,14 @@ def read_training(
     """
     state = _state(recent)
     recent_findings = _recent_findings(recent, state, has_goal=has_goal)
-    goal_findings = _goal_findings(goal, goal_time)
+    # With no run on record there is no evidence of anything — a runner who
+    # has not connected yet is not "missing every session", and telling them
+    # they are falling behind would be a verdict on data we do not have.
+    judged = has_goal and state != NO_RUNS
+    goal_findings = _goal_findings(goal, goal_time) if judged else ()
     return TrainingRead(
         state=state,
-        goal_state=_goal_state(goal_findings) if has_goal else None,
+        goal_state=_goal_state(goal_findings) if judged else None,
         goal_findings=goal_findings,
         recent_findings=recent_findings,
         focus=_focus(recent_findings + goal_findings),

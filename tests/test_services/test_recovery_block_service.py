@@ -83,7 +83,7 @@ def test_a_finished_marathon_offers_a_five_week_block():
 
 
 def test_no_offer_while_the_plan_is_still_running():
-    plan = _race_plan(ended_days_ago=-3)
+    plan = _race_plan(ended_days_ago=-5)
     assert recovery_offer(plan, [plan], TODAY) is None
 
 
@@ -137,10 +137,10 @@ def test_the_runner_may_pick_any_monday_inside_the_offer_window():
 
 
 def test_late_in_the_window_the_offer_still_has_a_monday_to_start_on():
-    # Thursday, 39 days after the plan ended: the next Monday is past the
-    # window, and is still the one start on offer.
+    # Thursday, 38 days after the plan ended: the next Monday is at the edge
+    # of the window, and is still the one start on offer.
     thursday = date(2026, 10, 1)
-    plan = _race_plan(ended_days_ago=39, today=thursday)
+    plan = _race_plan(ended_days_ago=38, today=thursday)
 
     offer = recovery_offer(plan, [plan], thursday)
 
@@ -240,7 +240,7 @@ def test_starting_twice_returns_the_same_block(test_db, runner):
 
 
 def test_starting_without_an_offer_is_a_conflict(test_db, runner):
-    plan = _race_plan(ended_days_ago=-3)
+    plan = _race_plan(ended_days_ago=-5)
     test_db.add(plan)
     test_db.commit()
 

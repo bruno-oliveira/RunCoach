@@ -14,7 +14,6 @@ from app.core.training.periodization.plan_calendar import (
     build_week_dates,
     compute_current_week,
     ensure_seven_days,
-    next_monday,
     workout_dates,
 )
 from app.core.training.periodization.strength_plan import derive_experience_level
@@ -140,7 +139,6 @@ def plan_view_context(
         "current_day_of_week": today_obj.isoweekday(),
         "week_dates": week_dates,
         "workout_date_labels": workout_date_labels,
-        "next_monday": next_monday(),
         "pace_zones_updated_recent": pace_zones_updated_recent,
         "today_workout_overlay": today_workout_overlay,
         "today_card": today_card,
