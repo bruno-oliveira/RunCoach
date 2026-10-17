@@ -1412,5 +1412,401 @@
             "gluten_free",
             "meal_prep"
         ]
+    },
+    {
+        "name": "Sardine, White Bean and Rocket Salad",
+        "meal_type": "lunch",
+        "description": "Tinned sardines, creamy white beans and peppery rocket with a lemon and caper dressing. No cooking, ten minutes.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 445,
+        "protein": 29,
+        "carbs": 28,
+        "fat": 24,
+        "fiber": 9,
+        "ingredients": [
+            "1 tin sardines in olive oil (about 90 g drained)",
+            "1/2 x 400 g tin cannellini beans, drained and rinsed",
+            "40 g rocket",
+            "100 g cherry tomatoes, halved",
+            "1/4 red onion, thinly sliced",
+            "1 tbsp extra virgin olive oil",
+            "1/2 lemon, juiced",
+            "1 tsp Dijon mustard",
+            "1 tsp capers",
+            "Small handful of parsley, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Tip the beans into a bowl.",
+            "Whisk the olive oil, lemon juice, mustard and capers with a pinch of salt and pepper, then toss half of it through the beans with the red onion.",
+            "Add the rocket and tomatoes and toss gently.",
+            "Break the sardines into large pieces over the top, bones and all, and spoon over the rest of the dressing.",
+            "Finish with the parsley and a few twists of black pepper."
+        ],
+        "tip": "The soft bones in tinned sardines are a real source of calcium and vitamin D, both key for bones under high mileage. The beans add fibre that feeds your gut bacteria.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Kimchi Fried Brown Rice with Tofu",
+        "meal_type": "lunch",
+        "description": "Day-old brown rice fried with crisp tofu, edamame and spinach, with kimchi folded in at the end.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 12,
+        "calories": 475,
+        "protein": 25,
+        "carbs": 55,
+        "fat": 17,
+        "fiber": 9,
+        "ingredients": [
+            "400 g cooked brown rice, ideally cooked the day before and chilled",
+            "200 g firm tofu, pressed and cubed",
+            "100 g frozen edamame beans",
+            "100 g baby spinach",
+            "150 g vegan kimchi, chopped, plus a splash of its juice",
+            "2 spring onions, sliced, white and green parts kept apart",
+            "1 garlic clove, crushed",
+            "2 tsp toasted sesame oil",
+            "1 tbsp tamari",
+            "1 tsp sesame seeds"
+        ],
+        "steps": [
+            "Heat half the sesame oil in a large frying pan and fry the tofu for 6-8 minutes, turning, until golden. Push it to the side.",
+            "Add the remaining oil, the garlic and the white spring onion and cook for 1 minute.",
+            "Add the cold rice and edamame and stir-fry over a high heat for 4 minutes, until the rice is hot and starting to crisp.",
+            "Stir in the spinach and tamari until the leaves wilt.",
+            "Take the pan off the heat, then fold through the kimchi and its juice so the live cultures survive.",
+            "Serve scattered with the green spring onion and sesame seeds."
+        ],
+        "tip": "Kimchi brings live cultures for your gut, but only if it isn't cooked hard, so add it at the end. Rice that has been cooked, chilled and reheated also carries more resistant starch, which feeds the good bacteria.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Beetroot, Lentil and Goat's Cheese Salad",
+        "meal_type": "lunch",
+        "description": "Earthy lentils and beetroot with orange, walnuts, mint and soft goat's cheese. Packs well for a lunch box.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 510,
+        "protein": 22,
+        "carbs": 42,
+        "fat": 28,
+        "fiber": 11,
+        "ingredients": [
+            "250 g cooked beetroot (not in vinegar), cut into wedges",
+            "250 g cooked Puy lentils (or a 250 g pouch)",
+            "80 g soft goat's cheese, crumbled",
+            "30 g walnuts, roughly chopped",
+            "60 g baby spinach or rocket",
+            "1 orange, peeled and segmented",
+            "1 tbsp extra virgin olive oil",
+            "1 tbsp red wine vinegar",
+            "1 tsp honey",
+            "Small bunch of mint, leaves picked",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Whisk the oil, vinegar and honey with a pinch of salt and pepper in a large bowl, catching any juice from the orange as you segment it.",
+            "Toss the lentils through the dressing; they soak it up best while they sit.",
+            "Fold in the spinach, then arrange the beetroot and orange segments on top.",
+            "Scatter over the goat's cheese, walnuts and mint.",
+            "For a packed lunch, keep the leaves and cheese in a separate box and combine them just before eating."
+        ],
+        "tip": "Beetroot and leafy greens are rich in dietary nitrate, which may lower the oxygen cost of running. The vitamin C in the orange helps you absorb the plant iron in the lentils.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Cooled Potato, Egg and Kefir Herb Salad",
+        "meal_type": "lunch",
+        "description": "New potatoes cooked ahead and chilled, tossed with soft-boiled eggs, green beans and a tangy kefir and dill dressing.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 22,
+        "calories": 425,
+        "protein": 20,
+        "carbs": 48,
+        "fat": 17,
+        "fiber": 7,
+        "ingredients": [
+            "500 g new potatoes, halved",
+            "4 eggs",
+            "160 g green beans, trimmed",
+            "6 radishes, sliced",
+            "1/2 cucumber, diced",
+            "150 ml plain kefir",
+            "1 tsp Dijon mustard",
+            "2 tsp extra virgin olive oil",
+            "1 tbsp capers",
+            "Small bunch of dill, chopped",
+            "Small bunch of chives, snipped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Boil the potatoes in salted water for 15 minutes until tender, adding the green beans for the last 3 minutes. Drain, cool, then chill for at least 2 hours or overnight.",
+            "Lower the eggs into boiling water for 7 minutes, then cool them in cold water and peel.",
+            "Whisk the kefir, mustard, oil and half the herbs with a pinch of salt and pepper.",
+            "Toss the cold potatoes and beans with the radishes, cucumber, capers and dressing.",
+            "Halve the eggs, lay them on top and finish with the rest of the herbs."
+        ],
+        "tip": "Cooking and then chilling potatoes turns part of their starch into resistant starch, a prebiotic fibre. Kefir adds live cultures and keeps the dressing light.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Miso Barley Broth with Mushrooms and Greens",
+        "meal_type": "lunch",
+        "description": "A savoury pot of pearl barley, mushrooms, leek and kale, finished with miso off the heat.",
+        "servings": 3,
+        "prep_time": 10,
+        "cook_time": 40,
+        "calories": 410,
+        "protein": 19,
+        "carbs": 61,
+        "fat": 10,
+        "fiber": 14,
+        "ingredients": [
+            "180 g pearl barley, rinsed",
+            "1 tbsp toasted sesame oil",
+            "1 leek, washed and sliced",
+            "2 garlic cloves, sliced",
+            "Thumb of ginger, grated",
+            "300 g chestnut mushrooms, sliced",
+            "100 g shiitake mushrooms, sliced",
+            "1.5 litres vegetable stock",
+            "180 g frozen edamame beans",
+            "150 g kale, stalks removed and leaves torn",
+            "3 tbsp white miso paste",
+            "2 spring onions, sliced",
+            "Chilli flakes, to serve"
+        ],
+        "steps": [
+            "Warm the oil in a large pan and soften the leek, garlic and ginger for 5 minutes.",
+            "Add both kinds of mushroom and cook for 5 minutes more, until they have released their liquid.",
+            "Stir in the barley and stock, bring to the boil and simmer for 30 minutes until the barley is tender.",
+            "Add the edamame and kale and simmer for 4 minutes.",
+            "Take the pan off the heat. Loosen the miso with a ladle of broth in a mug, then stir it back in; boiling miso dulls its flavour and its live cultures.",
+            "Serve topped with the spring onions and chilli flakes."
+        ],
+        "tip": "The beta-glucan fibre in barley and the prebiotics in leek feed your gut bacteria. Keep it for easy days: this much fibre is too much the day before a race.",
+        "dietary_tags": [
+            "vegan",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Plant-Diversity Grain Bowl",
+        "meal_type": "lunch",
+        "description": "Farro and chickpeas under a rainbow of cabbage, carrot, beetroot, avocado, pomegranate, herbs and toasted seeds, with a lemon tahini dressing.",
+        "servings": 2,
+        "prep_time": 20,
+        "cook_time": 30,
+        "calories": 625,
+        "protein": 23,
+        "carbs": 66,
+        "fat": 30,
+        "fiber": 18,
+        "ingredients": [
+            "120 g farro (or pearled spelt)",
+            "400 g tin chickpeas, drained and rinsed",
+            "1/4 red cabbage, finely shredded",
+            "1 carrot, grated",
+            "1 small cooked beetroot, diced",
+            "1 avocado, sliced",
+            "Seeds of 1/2 pomegranate",
+            "20 g pumpkin seeds",
+            "1 tbsp sunflower seeds",
+            "Small handful each of parsley, mint and coriander, chopped",
+            "2 tbsp tahini",
+            "1 lemon, juiced",
+            "1 small garlic clove, grated",
+            "1/2 tsp ground cumin",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Simmer the farro in plenty of salted water for 25-30 minutes until tender with a little bite, then drain.",
+            "Whisk the tahini, lemon juice, garlic and cumin with a pinch of salt and 3-4 tbsp water until smooth and pourable.",
+            "Toast the pumpkin and sunflower seeds in a dry pan for 2-3 minutes until they start to pop.",
+            "Toss the farro and chickpeas with half the dressing and the herbs.",
+            "Divide between two bowls and top with the cabbage, carrot, beetroot, avocado and pomegranate in separate piles.",
+            "Drizzle with the rest of the dressing and scatter over the seeds."
+        ],
+        "tip": "Eating 30 different plants a week is linked to a more diverse gut microbiome, and this bowl counts 16. Herbs, spices, seeds and grains all count.",
+        "dietary_tags": [
+            "vegan",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chicken, Leek and Butter Bean Soup",
+        "meal_type": "lunch",
+        "description": "A chunky, lemony soup of shredded chicken, leeks, potatoes and butter beans. Makes four bowls for the week.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 405,
+        "protein": 35,
+        "carbs": 42,
+        "fat": 11,
+        "fiber": 12,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "2 leeks, washed and sliced",
+            "2 carrots, diced",
+            "2 celery sticks, diced",
+            "2 garlic cloves, sliced",
+            "500 g skinless, boneless chicken thighs",
+            "400 g new potatoes, quartered",
+            "1.2 litres chicken stock",
+            "2 x 400 g tins butter beans, drained and rinsed",
+            "A few sprigs of thyme",
+            "100 g spinach",
+            "1/2 lemon, juiced",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Warm the oil in a large pan and cook the leeks, carrots and celery gently for 8 minutes until soft.",
+            "Add the garlic and cook for 1 minute, then add the whole chicken thighs, potatoes, stock and thyme.",
+            "Bring to a simmer, cover and cook for 20 minutes until the chicken is cooked through.",
+            "Lift out the chicken, shred it with two forks and return it to the pan with the butter beans.",
+            "Simmer for 5 minutes, then stir in the spinach and lemon juice and season.",
+            "Cool and portion what you won't eat today; it keeps for 3 days in the fridge or 3 months in the freezer."
+        ],
+        "tip": "About 35 g of protein per bowl to repair muscle, plus leeks and garlic, whose prebiotic fibres feed your gut bacteria. One batch covers the busy days of a big training week.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Smoked Mackerel and Sauerkraut Rye",
+        "meal_type": "lunch",
+        "description": "Open rye sandwiches with horseradish yogurt, crisp apple, smoked mackerel and a forkful of sauerkraut.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 425,
+        "protein": 19,
+        "carbs": 35,
+        "fat": 23,
+        "fiber": 8,
+        "ingredients": [
+            "2 slices dark rye bread",
+            "60 g smoked mackerel fillet, skin removed",
+            "40 g sauerkraut (unpasteurised, from the chiller)",
+            "30 g Greek yogurt",
+            "1 tsp horseradish sauce",
+            "1/4 cucumber, thinly sliced",
+            "1/2 small apple, thinly sliced",
+            "Small handful of watercress",
+            "A few sprigs of dill",
+            "Black pepper and a lemon wedge"
+        ],
+        "steps": [
+            "Mix the yogurt and horseradish with a squeeze of lemon and a twist of pepper.",
+            "Spread it over the rye slices.",
+            "Layer on the cucumber, apple and watercress.",
+            "Flake the mackerel over the top and add a forkful of sauerkraut to each slice.",
+            "Finish with the dill and a last squeeze of lemon."
+        ],
+        "tip": "Oily fish twice a week covers most runners' omega-3 needs. Chilled sauerkraut still has the live cultures that the shelf-stable kind has lost, and rye carries more fibre than wheat bread.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Tempeh and Roasted Squash Quinoa Bowl",
+        "meal_type": "lunch",
+        "description": "Caramelised tamari and lime tempeh with roasted butternut squash over quinoa and wilted kale.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 595,
+        "protein": 29,
+        "carbs": 75,
+        "fat": 20,
+        "fiber": 14,
+        "ingredients": [
+            "200 g tempeh, sliced",
+            "400 g butternut squash, peeled and cubed",
+            "120 g quinoa, rinsed",
+            "80 g kale, stalks removed and leaves torn",
+            "1 tbsp olive oil",
+            "2 tbsp tamari",
+            "2 tsp maple syrup",
+            "1 lime, juiced",
+            "Thumb of ginger, grated",
+            "1 garlic clove, grated",
+            "1/2 tsp smoked paprika",
+            "1 spring onion, sliced"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan. Toss the squash with half the oil and the paprika on a lined tray and roast for 25 minutes.",
+            "Mix the tamari, maple syrup, lime juice, ginger and garlic, and turn the tempeh slices in half of it.",
+            "Lay the tempeh on the tray for the last 12 minutes, until it caramelises at the edges.",
+            "Meanwhile, simmer the quinoa in twice its volume of water for 15 minutes, then stir in the kale, cover and leave for 5 minutes to wilt.",
+            "Divide the quinoa and kale between bowls, top with the squash and tempeh, and spoon over the remaining dressing and the spring onion."
+        ],
+        "tip": "Tempeh is fermented whole soya beans: complete protein, plus the fibre that tofu loses in processing. A strong choice for plant-based runners after a long run.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Turmeric Chicken, Lentil and Spinach Bowl",
+        "meal_type": "lunch",
+        "description": "Spiced chicken with green lentils, brown rice, roasted pepper and wilted spinach, finished with lemon and yogurt.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 550,
+        "protein": 45,
+        "carbs": 57,
+        "fat": 16,
+        "fiber": 12,
+        "ingredients": [
+            "200 g chicken breast, cut into strips",
+            "120 g dried green lentils, rinsed",
+            "150 g cooked brown rice",
+            "1 tsp ground turmeric",
+            "1 tsp ground cumin",
+            "4 tsp olive oil",
+            "1 red onion, sliced",
+            "1 jarred roasted red pepper, sliced",
+            "160 g baby spinach",
+            "1 lemon, zested and juiced",
+            "60 g Greek yogurt",
+            "Small bunch of coriander, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Simmer the lentils in plenty of water for 20-25 minutes until tender but holding their shape, then drain.",
+            "Toss the chicken with the turmeric, cumin, half the oil, a pinch of salt and a good pinch of black pepper.",
+            "Fry the onion in the remaining oil for 5 minutes, then add the chicken and cook for 6-7 minutes until cooked through.",
+            "Add the lentils, rice, red pepper and lemon zest and stir until hot, then fold in the spinach until it wilts.",
+            "Take off the heat, squeeze over the lemon juice and serve with a spoonful of yogurt and the coriander."
+        ],
+        "tip": "Runners lose iron through sweat and footstrike. The lemon's vitamin C helps you absorb the iron in the lentils and spinach, so save tea or coffee for an hour later: both block it.",
+        "dietary_tags": [
+            "gluten_free",
+            "anti_inflammatory",
+            "meal_prep"
+        ]
     }
 ]
