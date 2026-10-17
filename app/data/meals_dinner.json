@@ -1721,5 +1721,432 @@
             "vegetarian",
             "gluten_free"
         ]
+    },
+    {
+        "name": "Beef and Pearl Barley Stew",
+        "meal_type": "dinner",
+        "description": "Slow-simmered lean beef with root vegetables, pearl barley and kale. Better the next day.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 100,
+        "calories": 465,
+        "protein": 34,
+        "carbs": 55,
+        "fat": 12,
+        "fiber": 13,
+        "ingredients": [
+            "500 g lean braising steak, cut into 3 cm chunks",
+            "1 tbsp olive oil",
+            "1 onion, chopped",
+            "3 carrots, cut into chunks",
+            "2 parsnips, cut into chunks",
+            "2 celery sticks, sliced",
+            "2 garlic cloves, crushed",
+            "1 tbsp tomato purée",
+            "200 g pearl barley, rinsed",
+            "1.3 litres beef stock",
+            "2 bay leaves",
+            "A few sprigs of thyme",
+            "150 g kale or cavolo nero, shredded",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Season the beef and brown it in batches in the oil in a large casserole over a high heat. Set it aside.",
+            "Lower the heat, add the onion, carrots, parsnips and celery and cook for 8 minutes until starting to colour.",
+            "Stir in the garlic and tomato purée for 1 minute, then return the beef with the barley, stock, bay and thyme.",
+            "Cover and simmer gently for 1 1/2 hours, stirring now and then, until the beef is tender and the barley plump. Add a splash of water if it gets too thick.",
+            "Stir in the kale for the last 5 minutes and season to taste."
+        ],
+        "tip": "Red meat once or twice a week is an easy way to cover iron, zinc and vitamin B12, which endurance runners run short of more often than most. The soluble fibre in barley is good for gut and heart alike.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Baked Trout with Beetroot and New Potatoes",
+        "meal_type": "dinner",
+        "description": "Trout fillets roasted on a tray of beetroot and new potatoes, with green beans and a horseradish and dill yogurt.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 42,
+        "calories": 560,
+        "protein": 40,
+        "carbs": 51,
+        "fat": 22,
+        "fiber": 10,
+        "ingredients": [
+            "400 g new potatoes, halved",
+            "300 g raw beetroot, peeled and cut into wedges",
+            "4 tsp olive oil",
+            "2 trout fillets (about 140 g each)",
+            "1 lemon, sliced",
+            "200 g green beans, trimmed",
+            "80 g Greek yogurt",
+            "2 tsp horseradish sauce",
+            "Small bunch of dill, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan. Toss the potatoes and beetroot with most of the oil and some salt on a large tray and roast for 30 minutes.",
+            "Push the vegetables to the sides, lay the trout skin-side down in the middle, drizzle with the remaining oil and top with the lemon slices.",
+            "Roast for 10-12 minutes until the fish flakes easily.",
+            "Meanwhile, boil the green beans for 4 minutes and drain.",
+            "Stir the yogurt, horseradish and half the dill together and season.",
+            "Serve the trout and vegetables with the beans, a spoonful of the sauce and the remaining dill."
+        ],
+        "tip": "Trout is an affordable oily fish rich in omega-3, which may ease post-exercise soreness, and beetroot adds dietary nitrate. A good dinner in a heavy training week.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Miso Salmon with Soba and Greens",
+        "meal_type": "dinner",
+        "description": "Grilled miso and ginger salmon over soba noodles with Tenderstem broccoli and pak choi.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 12,
+        "calories": 630,
+        "protein": 39,
+        "carbs": 65,
+        "fat": 24,
+        "fiber": 7,
+        "ingredients": [
+            "2 salmon fillets (about 130 g each)",
+            "2 tbsp white miso paste",
+            "2 tsp honey",
+            "1 tbsp rice vinegar",
+            "Thumb of ginger, grated",
+            "150 g soba noodles",
+            "200 g Tenderstem broccoli",
+            "2 pak choi, quartered",
+            "2 tsp toasted sesame oil",
+            "1 tbsp tamari",
+            "2 spring onions, sliced",
+            "2 tsp sesame seeds"
+        ],
+        "steps": [
+            "Heat the grill to high. Mix the miso, honey, rice vinegar and half the ginger into a paste.",
+            "Lay the salmon skin-side down on a lined tray, spread the paste over the top and grill for 8-10 minutes until caramelised and just cooked through.",
+            "Meanwhile, cook the soba for 4-5 minutes, adding the broccoli and pak choi for the last 3 minutes. Drain and rinse briefly under warm water so the noodles don't stick.",
+            "Toss the noodles and greens with the sesame oil, tamari and remaining ginger.",
+            "Serve the salmon on the noodles, scattered with the spring onions and sesame seeds."
+        ],
+        "tip": "Plenty of carbohydrate to refuel, around 40 g of protein and a good dose of omega-3. Check the soba label if you avoid gluten: most contain wheat as well as buckwheat.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Turmeric Chickpea, Lentil and Kale Stew",
+        "meal_type": "dinner",
+        "description": "A golden one-pot stew of red lentils, chickpeas, tomato and coconut with kale and lime, served over brown rice.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 610,
+        "protein": 26,
+        "carbs": 90,
+        "fat": 16,
+        "fiber": 17,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, chopped",
+            "3 garlic cloves, crushed",
+            "Thumb of ginger, grated",
+            "2 tsp ground turmeric",
+            "2 tsp ground cumin",
+            "1/2 tsp black pepper",
+            "160 g red lentils, rinsed",
+            "2 x 400 g tins chickpeas, drained and rinsed",
+            "400 g tin chopped tomatoes",
+            "400 ml tin light coconut milk",
+            "600 ml vegetable stock",
+            "200 g kale, stalks removed and leaves shredded",
+            "1 lime, juiced",
+            "200 g brown basmati rice, to serve"
+        ],
+        "steps": [
+            "Warm the oil in a large pan and soften the onion for 6-7 minutes.",
+            "Add the garlic, ginger, turmeric, cumin and black pepper and stir for 1 minute until fragrant.",
+            "Add the lentils, chickpeas, tomatoes, coconut milk and stock. Bring to the boil, then simmer for 20 minutes, stirring often, until the lentils have broken down.",
+            "Meanwhile, simmer the rice for 25 minutes until tender, then drain.",
+            "Stir the kale into the stew for the last 5 minutes, then add the lime juice and season.",
+            "Serve over the rice. The stew keeps for 4 days in the fridge and freezes well."
+        ],
+        "tip": "Lentils and chickpeas together give 26 g of plant protein and a big helping of gut-friendly fibre. The black pepper helps your body absorb the turmeric.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep",
+            "anti_inflammatory"
+        ]
+    },
+    {
+        "name": "Tofu, Shiitake and Broccoli Stir-Fry",
+        "meal_type": "dinner",
+        "description": "Crisp calcium-set tofu with shiitake, broccoli and red pepper in a tamari and lime glaze, with brown rice and cashews.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 685,
+        "protein": 34,
+        "carbs": 77,
+        "fat": 27,
+        "fiber": 12,
+        "ingredients": [
+            "300 g firm tofu (calcium-set), pressed and cubed",
+            "2 tsp cornflour",
+            "130 g brown rice",
+            "1 tbsp rapeseed oil",
+            "150 g shiitake mushrooms, sliced",
+            "300 g broccoli, cut into small florets",
+            "1 red pepper, sliced",
+            "2 garlic cloves, sliced",
+            "Thumb of ginger, cut into matchsticks",
+            "2 tbsp tamari",
+            "1 tsp maple syrup",
+            "1 lime, juiced",
+            "2 tsp toasted sesame oil",
+            "20 g cashews, toasted"
+        ],
+        "steps": [
+            "Simmer the rice for 25 minutes until tender, then drain and leave covered.",
+            "Toss the tofu in the cornflour with a pinch of salt. Fry it in the rapeseed oil in a wok over a high heat for 6-8 minutes until crisp, then lift out.",
+            "Stir-fry the shiitake for 3 minutes, then add the broccoli, pepper and a splash of water and cook for 4 minutes more.",
+            "Add the garlic and ginger for 1 minute, then return the tofu with the tamari, maple syrup and lime juice and toss to coat.",
+            "Drizzle with the sesame oil, scatter over the cashews and serve with the rice."
+        ],
+        "tip": "Tofu set with calcium sulphate gives about a third of a day's calcium per portion, which matters for bones under high mileage. Look for calcium sulphate on the label.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Simple Pre-Race Chicken and White Rice",
+        "meal_type": "dinner",
+        "description": "Ginger and honey glazed chicken with soft carrots over white rice. Low in fibre and gentle on the gut the night before a race.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 17,
+        "calories": 625,
+        "protein": 37,
+        "carbs": 92,
+        "fat": 12,
+        "fiber": 3,
+        "ingredients": [
+            "100 g white jasmine or basmati rice",
+            "1 chicken breast (about 120 g)",
+            "2 tsp garlic-infused olive oil",
+            "1 carrot, peeled and sliced into thin coins",
+            "1 tsp honey",
+            "1 tbsp tamari",
+            "1/2 tsp grated ginger",
+            "Pinch of salt"
+        ],
+        "steps": [
+            "Rinse the rice and simmer it, covered, in 200 ml water with the salt for 12 minutes. Take it off the heat and leave covered for 5 minutes.",
+            "Meanwhile, slice the chicken into strips and fry it in the garlic oil for 6-7 minutes until cooked through.",
+            "Add the carrot and a splash of water, cover and cook for 3-4 minutes until soft.",
+            "Stir in the honey, tamari and ginger and let it bubble for 1 minute to glaze.",
+            "Serve over the rice."
+        ],
+        "tip": "The night before a race, sports dietitians suggest cutting fibre and FODMAPs so nothing upsets your gut in the morning. Garlic-infused oil gives the flavour without the fructans in garlic itself.",
+        "dietary_tags": [
+            "gluten_free",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Mussels with Tomato, Fennel and Wholewheat Linguine",
+        "meal_type": "dinner",
+        "description": "Mussels steamed open in a garlicky tomato and fennel sauce, tossed through wholewheat linguine. On the table in half an hour.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 15,
+        "calories": 550,
+        "protein": 35,
+        "carbs": 71,
+        "fat": 14,
+        "fiber": 12,
+        "ingredients": [
+            "1 kg live mussels, cleaned",
+            "170 g wholewheat linguine",
+            "4 tsp olive oil",
+            "1 fennel bulb, thinly sliced",
+            "3 garlic cloves, sliced",
+            "Pinch of chilli flakes",
+            "400 g tin chopped tomatoes",
+            "100 ml vegetable stock",
+            "1/2 lemon, zested",
+            "Large handful of parsley, chopped"
+        ],
+        "steps": [
+            "Discard any mussels that are cracked or stay open when tapped.",
+            "Cook the linguine in salted boiling water for 10-12 minutes until just tender.",
+            "Meanwhile, warm the oil in a large lidded pan and cook the fennel for 6 minutes until soft. Add the garlic and chilli for 1 minute.",
+            "Add the tomatoes and stock and bring to a rapid boil, then tip in the mussels, cover and cook for 4-5 minutes, shaking the pan, until they open. Discard any that stay closed.",
+            "Toss the drained linguine through the sauce with the lemon zest and parsley and serve straight away."
+        ],
+        "tip": "Mussels are one of the richest food sources of iron and vitamin B12, and they're cheap and sustainable. Wholewheat pasta has about twice the fibre of white.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Lentil and Mushroom Shepherd's Pie",
+        "meal_type": "dinner",
+        "description": "A rich lentil, mushroom and vegetable filling under a sweet potato mash. Freezes well in portions.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 55,
+        "calories": 500,
+        "protein": 22,
+        "carbs": 85,
+        "fat": 8,
+        "fiber": 17,
+        "ingredients": [
+            "2 tbsp olive oil",
+            "1 onion, finely chopped",
+            "2 carrots, diced",
+            "2 celery sticks, diced",
+            "250 g chestnut mushrooms, chopped",
+            "2 garlic cloves, crushed",
+            "2 tbsp tomato purée",
+            "240 g dried green or brown lentils, rinsed",
+            "800 ml vegetable stock",
+            "1 tbsp tamari",
+            "A few sprigs of thyme",
+            "160 g frozen peas",
+            "800 g sweet potatoes, peeled and cubed",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Warm 1 tbsp of the oil in a large pan and soften the onion, carrots and celery for 8 minutes. Add the mushrooms and cook for 5 minutes more.",
+            "Stir in the garlic and tomato purée for 1 minute, then add the lentils, stock, tamari and thyme. Simmer for 30 minutes until the lentils are tender and the sauce is thick, then stir in the peas.",
+            "Meanwhile, boil the sweet potatoes for 12-15 minutes until soft, drain well and mash with the remaining oil and plenty of pepper.",
+            "Heat the oven to 200°C fan. Spoon the lentil mixture into a baking dish and spread the mash over the top.",
+            "Bake for 20 minutes until the top is lightly crisp at the edges."
+        ],
+        "tip": "22 g of plant protein and about 17 g of fibre per portion. If you're not used to this much fibre, build up over a few weeks rather than in race week.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Harissa Chicken Traybake with Chickpeas",
+        "meal_type": "dinner",
+        "description": "Harissa chicken thighs roasted with chickpeas, red onion, pepper, potatoes and tomatoes, with a minty yogurt.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 45,
+        "calories": 645,
+        "protein": 41,
+        "carbs": 64,
+        "fat": 25,
+        "fiber": 13,
+        "ingredients": [
+            "250 g skinless, boneless chicken thighs",
+            "2 tbsp harissa paste",
+            "4 tsp olive oil",
+            "300 g baby potatoes, halved",
+            "400 g tin chickpeas, drained and rinsed",
+            "2 red onions, cut into wedges",
+            "1 red pepper, cut into chunks",
+            "1 tsp ground cumin",
+            "200 g cherry tomatoes",
+            "80 g Greek yogurt",
+            "1/2 lemon, juiced",
+            "Small bunch of mint, chopped"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan. Mix the harissa with half the oil and coat the chicken in it.",
+            "Toss the potatoes with the rest of the oil and a pinch of salt on a large tray and roast for 15 minutes.",
+            "Add the chickpeas, onions, pepper and cumin to the tray, toss, and nestle the chicken on top. Roast for 20 minutes.",
+            "Scatter over the tomatoes and roast for 10 minutes more, until the chicken is cooked through and the chickpeas are crisp at the edges.",
+            "Stir the lemon juice and half the mint into the yogurt and serve it on the side, with the rest of the mint scattered over."
+        ],
+        "tip": "Onions and chickpeas are both good sources of prebiotic fibre, food for the bacteria in your gut. One tray gives plenty of protein and carbs for a training-day dinner.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "White Bean Shakshuka with Feta and Spinach",
+        "meal_type": "dinner",
+        "description": "Eggs gently poached in a smoky tomato, pepper and white bean sauce with spinach and feta, with wholemeal toast for dipping.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 27,
+        "calories": 630,
+        "protein": 36,
+        "carbs": 68,
+        "fat": 24,
+        "fiber": 16,
+        "ingredients": [
+            "2 tsp olive oil",
+            "1 onion, sliced",
+            "1 red pepper, sliced",
+            "2 garlic cloves, sliced",
+            "1 tsp ground cumin",
+            "1 tsp smoked paprika",
+            "400 g tin chopped tomatoes",
+            "400 g tin cannellini beans, drained and rinsed",
+            "100 g baby spinach",
+            "4 eggs",
+            "60 g feta, crumbled",
+            "Small bunch of parsley or coriander, chopped",
+            "4 slices wholemeal bread, toasted, to serve"
+        ],
+        "steps": [
+            "Warm the oil in a deep frying pan and cook the onion and pepper for 8 minutes until soft and sweet.",
+            "Add the garlic, cumin and paprika and stir for 1 minute.",
+            "Add the tomatoes and beans with a splash of water, season, and simmer for 10 minutes until thickened. Stir in the spinach until it wilts.",
+            "Make four hollows in the sauce, crack an egg into each, cover and cook over a low heat for 6-8 minutes until the whites are set and the yolks still soft.",
+            "Scatter over the feta and herbs and serve with the toast for dipping."
+        ],
+        "tip": "Eggs and beans make an inexpensive dinner with over 35 g of protein and 16 g of fibre. Tomatoes cooked with olive oil also release more of their lycopene.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Kefir-Marinated Chicken Skewers with Herby Bulgur",
+        "meal_type": "dinner",
+        "description": "Tender lemon and oregano chicken skewers, marinated ahead in kefir, with a fresh herb bulgur salad and garlic yogurt.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 12,
+        "calories": 580,
+        "protein": 45,
+        "carbs": 57,
+        "fat": 19,
+        "fiber": 11,
+        "ingredients": [
+            "250 g chicken breast, cut into 3 cm chunks",
+            "150 ml plain kefir",
+            "1 lemon, zested and juiced",
+            "2 garlic cloves, crushed",
+            "1 tsp dried oregano",
+            "140 g bulgur wheat",
+            "2 tomatoes, diced",
+            "1/2 cucumber, diced",
+            "Large bunch of parsley, chopped",
+            "Small bunch of mint, chopped",
+            "4 tsp extra virgin olive oil",
+            "100 g Greek yogurt",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Mix the kefir, lemon zest, half the garlic, the oregano and a pinch of salt. Stir in the chicken and leave it to marinate in the fridge for at least 1 hour, or overnight.",
+            "Pour 300 ml boiling water over the bulgur, cover and leave for 15 minutes, then fluff it with a fork.",
+            "Stir the tomatoes, cucumber, herbs, oil and half the lemon juice through the bulgur and season.",
+            "Thread the chicken onto skewers, shaking off the excess marinade, and grill or griddle over a high heat for 10-12 minutes, turning, until charred and cooked through.",
+            "Mix the yogurt with the remaining garlic and lemon juice and serve with the skewers and bulgur."
+        ],
+        "tip": "The lactic acid in kefir tenderises chicken the way buttermilk does. Bulgur is a quick wholegrain with more fibre than rice, so keep it for dinners well before race eve.",
+        "dietary_tags": []
     }
 ]

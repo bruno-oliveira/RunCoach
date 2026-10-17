@@ -1517,5 +1517,145 @@
             "gluten_free",
             "portable"
         ]
+    },
+    {
+        "name": "Salted Roasted Chestnuts",
+        "meal_type": "trail",
+        "description": "Ready-cooked chestnuts roasted with a little salt until dry-edged and chewy. A starchy, low-fat trail food that won't melt or crumble.",
+        "servings": 4,
+        "serving_size": "1 bag (about 50 g)",
+        "prep_time": 2,
+        "cook_time": 15,
+        "calories": 100,
+        "protein": 1,
+        "carbs": 19,
+        "fat": 2,
+        "fiber": 2,
+        "ingredients": [
+            "200 g vacuum-packed cooked chestnuts",
+            "1 tsp olive oil",
+            "1/2 tsp flaky sea salt",
+            "1/4 tsp ground cinnamon (optional)"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan and line a tray with baking paper.",
+            "Toss the chestnuts with the oil, salt and cinnamon and spread them out in a single layer.",
+            "Roast for 12-15 minutes, shaking the tray once, until the outsides are dry and lightly crisp.",
+            "Cool completely, then divide between small bags."
+        ],
+        "tip": "Chestnuts are mostly starch with very little fat, so they digest more like potato than like a nut. Good on long, cold days when you want something savoury.",
+        "storage": "Keeps for 3 days in an airtight container.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Umeboshi Rice Balls",
+        "meal_type": "trail",
+        "description": "Japanese onigiri: soft sushi rice pressed around a salted plum and wrapped in a strip of nori.",
+        "servings": 4,
+        "serving_size": "1 ball (about 90 g)",
+        "prep_time": 15,
+        "cook_time": 22,
+        "calories": 140,
+        "protein": 3,
+        "carbs": 30,
+        "fat": 1,
+        "fiber": 1,
+        "ingredients": [
+            "150 g sushi rice",
+            "2 umeboshi (Japanese salted plums), stoned and chopped",
+            "1/2 tsp salt",
+            "1 tsp toasted sesame seeds",
+            "1 sheet nori, cut into 4 strips"
+        ],
+        "steps": [
+            "Rinse the rice until the water runs clear, then cook it, covered, in 200 ml water over a low heat for 12 minutes. Leave it covered off the heat for 10 minutes.",
+            "Spread the rice on a plate and let it cool until you can handle it comfortably.",
+            "Wet your hands, rub a pinch of the salt over your palms and take a quarter of the rice. Press a hollow in the middle, add a piece of umeboshi and close the rice around it.",
+            "Press it into a firm triangle or ball, sprinkle with sesame and wrap a nori strip around the base.",
+            "Wrap each one tightly in cling film."
+        ],
+        "tip": "The salted plum adds sodium and a sharp, savoury flavour that cuts through hours of sweet fuel. Onigiri are a classic Japanese hiking food: soft, salty and easy on the stomach.",
+        "storage": "Best eaten the same day; keep cool and out of the sun.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Savoury Egg and Rice Squares",
+        "meal_type": "trail",
+        "description": "Sticky rice pressed with soft scrambled egg and spring onion, then cut into squares. Savoury real food that sits easily for hours.",
+        "servings": 8,
+        "serving_size": "1 square (about 70 g)",
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 180,
+        "protein": 6,
+        "carbs": 30,
+        "fat": 4,
+        "fiber": 1,
+        "ingredients": [
+            "300 g sushi rice",
+            "4 eggs",
+            "1 tbsp olive oil",
+            "3 spring onions, finely sliced",
+            "1 tbsp tamari",
+            "1 tsp salt",
+            "1/2 tsp black pepper"
+        ],
+        "steps": [
+            "Cook the rice, covered, in 400 ml water over a low heat for 12 minutes, then leave it covered off the heat for 10 minutes.",
+            "Beat the eggs with the tamari and pepper. Scramble them softly in the oil with the spring onions, then break them into small pieces.",
+            "Fold the egg and salt through the warm rice.",
+            "Press the mixture firmly into a 20 cm square tin lined with baking paper, cover and chill for 1 hour until set.",
+            "Cut into 8 squares and wrap each one in baking paper or foil."
+        ],
+        "tip": "A little protein and fat alongside the carbs, and a welcome savoury change in the second half of a long day. Cycling team cooks made these famous for good reason.",
+        "storage": "Keeps for 2 days in the fridge; eat within a few hours once out on the trail.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Oven-Dried Banana Coins",
+        "meal_type": "trail",
+        "description": "Banana slices dried slowly in a low oven until chewy. One banana per bag and no added sugar.",
+        "servings": 4,
+        "serving_size": "1 bag (about 30 g)",
+        "prep_time": 10,
+        "cook_time": 165,
+        "calories": 115,
+        "protein": 1,
+        "carbs": 28,
+        "fat": 0,
+        "fiber": 3,
+        "ingredients": [
+            "4 ripe but firm bananas",
+            "1 lemon, juiced",
+            "1/4 tsp fine sea salt"
+        ],
+        "steps": [
+            "Heat the oven to its lowest setting, ideally 80-90°C, and line two trays with baking paper.",
+            "Peel the bananas and slice them into 5 mm coins.",
+            "Toss them gently in the lemon juice to stop them browning, then spread them out on the trays and dust with the salt.",
+            "Dry for 2 1/2-3 hours, turning once, until leathery and no longer sticky. They firm up a little more as they cool.",
+            "Cool completely before bagging."
+        ],
+        "tip": "Chewy rather than crisp, so they go down without much water. About 28 g of carbs per bag, plus potassium from the fruit.",
+        "storage": "Keeps for 2 weeks in an airtight jar.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
     }
 ]

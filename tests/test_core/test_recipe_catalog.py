@@ -67,7 +67,8 @@ ANIMAL_PRODUCT = re.compile(
 )
 # Plant ingredients whose names contain an animal-product word.
 PLANT_EXCEPTIONS = re.compile(
-    r"(peanut|almond|nut|seed) butter|butter beans|(almond|oat|soy|coconut|plant) milk"
+    r"(peanut|almond|nut|seed) butter|butter beans|butternut"
+    r"|(almond|oat|soy|coconut|plant) milk"
     r"|coconut cream|vegan|dairy-free|cream of tartar|or maple",
     re.IGNORECASE,
 )

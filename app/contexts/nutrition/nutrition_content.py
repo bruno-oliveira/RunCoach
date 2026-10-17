@@ -536,6 +536,50 @@ _TRAIL_FUEL_IDEAS: List[Dict[str, Any]] = [
             "piece at the first hint of nausea, before you stop eating."
         ),
     },
+    {
+        "name": "Umeboshi rice balls",
+        "recipe": "Umeboshi Rice Balls",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~30 g each",
+        "note": (
+            "Sushi rice pressed around a salted plum. Soft, salty real food "
+            "for when sweet fuel stops going down."
+        ),
+    },
+    {
+        "name": "Salted roasted chestnuts",
+        "recipe": "Salted Roasted Chestnuts",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~19 g per bag",
+        "note": (
+            "Starchy and almost fat-free, so they digest more like potato than "
+            "like a nut. They won't melt in a pocket or crumble in the cold."
+        ),
+    },
+    {
+        "name": "Egg & rice squares",
+        "recipe": "Savoury Egg and Rice Squares",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~30 g each",
+        "note": (
+            "Sticky rice pressed with scrambled egg and spring onion. A little "
+            "protein and salt for the second half of a long day."
+        ),
+    },
+    {
+        "name": "Dried banana coins",
+        "recipe": "Oven-Dried Banana Coins",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~28 g per bag",
+        "note": (
+            "A banana dried slowly until chewy, with no added sugar. Easy to "
+            "get down without much water."
+        ),
+    },
     # --- After: recovery ------------------------------------------------
     {
         "name": "Recovery smoothie",
