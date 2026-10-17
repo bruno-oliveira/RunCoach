@@ -41,6 +41,7 @@ function toggleMobileNav(forceClose) {
     navMenu.classList.toggle('active', willOpen);
     toggle.classList.toggle('is-open', willOpen);
     toggle.setAttribute('aria-expanded', willOpen);
+    nav.classList.toggle('menu-open', willOpen);
     document.body.style.overflow = willOpen ? 'hidden' : '';
 
     if (backdrop) backdrop.classList.toggle('is-active', willOpen);

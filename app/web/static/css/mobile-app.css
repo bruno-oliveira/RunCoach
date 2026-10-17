@@ -124,15 +124,30 @@ select,
     border-top-color: var(--color-border);
   }
 
-  /* The menu sheet (#navMenu) runs to the bottom of the screen, underneath
-     this bar, so its last rows — Sign Out among them — must scroll clear. */
+  /* The menu sheet (#navMenu) fills the gap between the app bar and this
+     bar, so its last rows — language and theme — end above the tab bar
+     rather than underneath it. */
   .nav-menu {
     /* Hang from the compact app bar, not the desktop navbar's 60px. */
     top: var(--app-bar-height);
-    height: calc(100vh - var(--app-bar-height));
-    height: calc(100dvh - var(--app-bar-height));
-    padding-bottom: calc(var(--tab-bar-total) + var(--space-6));
+    height: calc(100vh - var(--app-bar-height) - var(--tab-bar-total));
+    height: calc(100dvh - var(--app-bar-height) - var(--tab-bar-total));
+    padding-bottom: var(--space-6);
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* The sheet lives inside .navbar, whose backdrop-filter and
+     `will-change: transform` make it the sheet's containing block. iOS
+     Safari will not touch-scroll a fixed scroller inside that layer, so the
+     sheet stayed put with its bottom rows hidden. While it is open the
+     navbar drops both (nav.js sets .menu-open) and turns solid, matching
+     the sheet beneath it. */
+  .navbar.menu-open {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    will-change: auto;
+    transform: none;
+    background: var(--color-bg);
   }
 
   /* The sheet is a fixed-height scrolling column. Safari lets a shrinkable
